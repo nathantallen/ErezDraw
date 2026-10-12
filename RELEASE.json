@@ -1,0 +1,21 @@
+{
+  "version": "0.11",
+  "distribution": "source with Windows/macOS build scripts",
+  "tests": 49,
+  "native_regressions": [
+    "toluene",
+    "mouse-drag splitters",
+    "metal superscript"
+  ],
+  "platform_binaries_included": false,
+  "sha256": {
+    "main.py": "243c6ab8a97f26f561aab14b7632dadaef742992476b27ab9bf08298756ed1ef",
+    "nmr_models.py": "34e2b912183a50e0bc5d8a404b985b3e22ddaa9c885bc80ae3972946445afad1",
+    "structure_ui.py": "9e0febb04215127829eb4da1681bf800ba952021b63a0c16ff6ca6b351b7374a",
+    "spectrum_ui.py": "b78ae4f1218909229f3c6a6271418e489966596c2b07ce481d7d7254f28a84fa",
+    "assets/editor.html": "d9c9af45e5f4725aeddf02ca1ceda0b1a1ab2f6b2cc902466bdba83994110c2e",
+    "build_macos.py": "4c653a7e61f875c1144943f6f4324b12c7f895e1dec106bd34dfd79ab0fd6209",
+    "Build-macOS.command": "ffc43a8fc97dfc94503ec76b7633b895b9d816d56475f26f942e0646b46f6148",
+    "Run-macOS.command": "fa307af4e2973cebbe596e93fd2622294b1dade47a3092027679fc1684399569"
+  }
+}

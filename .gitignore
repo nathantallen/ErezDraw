@@ -1,0 +1,39 @@
+# Local dependencies and generated packages
+.venv*/
+venv/
+node_modules/
+build/
+dist/
+*.app/
+*.spec
+*.zip
+*.dmg
+*.exe
+
+# Python caches and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Operating-system metadata and local editor state
+.DS_Store
+._*
+.idea/
+.vscode/
+*.swp
+*preview.jpg
+*preview.png
+
+# Secrets and machine-specific settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Personal drawings; versioned examples remain available
+*.chemjson
+!examples/*.chemjson

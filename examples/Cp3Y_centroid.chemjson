@@ -1,0 +1,394 @@
+{
+  "format": "chemsketch-classic",
+  "version": 1,
+  "name": "Tris(cyclopentadienyl)yttrium",
+  "atoms": [
+    {
+      "id": "Y",
+      "label": "Y",
+      "x": 500,
+      "y": 350,
+      "charge": 3,
+      "chargeMode": "auto"
+    },
+    {
+      "id": "a12c9384b8ab64e",
+      "x": 474.0260323340816,
+      "y": 290.0,
+      "label": "C",
+      "charge": -1,
+      "radical": 0,
+      "noImplicit": true,
+      "explicitHs": 1
+    },
+    {
+      "id": "ae8496abc7ff64b",
+      "x": 450.5146222423827,
+      "y": 257.6393202250021,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "a3b30ef6a5faa46",
+      "x": 412.47236159057655,
+      "y": 270.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "a45fa7e0b544548",
+      "x": 412.4723615905765,
+      "y": 310.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "aed0a9f52cc2641",
+      "x": 450.51462224238264,
+      "y": 322.3606797749979,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "centroidb7398a1957c845",
+      "x": 440.0,
+      "y": 290.0,
+      "label": "",
+      "charge": 0,
+      "nodeType": "centroid",
+      "members": [
+        "a12c9384b8ab64e",
+        "ae8496abc7ff64b",
+        "a3b30ef6a5faa46",
+        "a45fa7e0b544548",
+        "aed0a9f52cc2641"
+      ]
+    },
+    {
+      "id": "ac679464272fb4b",
+      "x": 594.0260323340816,
+      "y": 290.0,
+      "label": "C",
+      "charge": -1,
+      "radical": 0,
+      "noImplicit": true,
+      "explicitHs": 1
+    },
+    {
+      "id": "aabba133e6a874b",
+      "x": 570.5146222423826,
+      "y": 257.6393202250021,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "ae8314e39d94242",
+      "x": 532.4723615905765,
+      "y": 270.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "ab997ca256d6c48",
+      "x": 532.4723615905765,
+      "y": 310.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "afff365c786014a",
+      "x": 570.5146222423826,
+      "y": 322.3606797749979,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "centroid6fb52a26121946",
+      "x": 560.0,
+      "y": 290.0,
+      "label": "",
+      "charge": 0,
+      "nodeType": "centroid",
+      "members": [
+        "ac679464272fb4b",
+        "aabba133e6a874b",
+        "ae8314e39d94242",
+        "ab997ca256d6c48",
+        "afff365c786014a"
+      ]
+    },
+    {
+      "id": "aefbca3b20ddf47",
+      "x": 534.0260323340816,
+      "y": 420.0,
+      "label": "C",
+      "charge": -1,
+      "radical": 0,
+      "noImplicit": true,
+      "explicitHs": 1
+    },
+    {
+      "id": "a8bcc0f17109b48",
+      "x": 510.5146222423827,
+      "y": 387.6393202250021,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "a7c22d9f33c0040",
+      "x": 472.47236159057655,
+      "y": 400.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "ac86e06ca31b349",
+      "x": 472.4723615905765,
+      "y": 440.0,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "ac89bb29644a44f",
+      "x": 510.51462224238264,
+      "y": 452.3606797749979,
+      "label": "C",
+      "charge": 0,
+      "radical": 0
+    },
+    {
+      "id": "centroid69fa79f7864044",
+      "x": 500.0,
+      "y": 420.0,
+      "label": "",
+      "charge": 0,
+      "nodeType": "centroid",
+      "members": [
+        "aefbca3b20ddf47",
+        "a8bcc0f17109b48",
+        "a7c22d9f33c0040",
+        "ac86e06ca31b349",
+        "ac89bb29644a44f"
+      ]
+    }
+  ],
+  "bonds": [
+    {
+      "id": "b25968d93c6234c",
+      "a": "a12c9384b8ab64e",
+      "b": "ae8496abc7ff64b",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "be81b78b4d1414d",
+      "a": "ae8496abc7ff64b",
+      "b": "a3b30ef6a5faa46",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b1316b852e7ef46",
+      "a": "a3b30ef6a5faa46",
+      "b": "a45fa7e0b544548",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b02d8271608c34e",
+      "a": "a45fa7e0b544548",
+      "b": "aed0a9f52cc2641",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b66fbdb63abf44a",
+      "a": "aed0a9f52cc2641",
+      "b": "a12c9384b8ab64e",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b521b748cc81940",
+      "a": "centroidb7398a1957c845",
+      "b": "Y",
+      "order": 1,
+      "style": "coord"
+    },
+    {
+      "id": "b60b0f85cf0384f",
+      "a": "ac679464272fb4b",
+      "b": "aabba133e6a874b",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b7b5986027ef849",
+      "a": "aabba133e6a874b",
+      "b": "ae8314e39d94242",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "bd98f46da592e40",
+      "a": "ae8314e39d94242",
+      "b": "ab997ca256d6c48",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "bbfe22c0abd764e",
+      "a": "ab997ca256d6c48",
+      "b": "afff365c786014a",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b72d00790469048",
+      "a": "afff365c786014a",
+      "b": "ac679464272fb4b",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "bec67db146e5241",
+      "a": "centroid6fb52a26121946",
+      "b": "Y",
+      "order": 1,
+      "style": "coord"
+    },
+    {
+      "id": "b72daed9e938143",
+      "a": "aefbca3b20ddf47",
+      "b": "a8bcc0f17109b48",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b67bf1d169b8347",
+      "a": "a8bcc0f17109b48",
+      "b": "a7c22d9f33c0040",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b2578124b39fd4f",
+      "a": "a7c22d9f33c0040",
+      "b": "ac86e06ca31b349",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b151a6f4b392345",
+      "a": "ac86e06ca31b349",
+      "b": "ac89bb29644a44f",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "b684bed22e31d44",
+      "a": "ac89bb29644a44f",
+      "b": "aefbca3b20ddf47",
+      "order": 4,
+      "style": "normal"
+    },
+    {
+      "id": "bc8c220acd8ba4e",
+      "a": "centroid69fa79f7864044",
+      "b": "Y",
+      "order": 1,
+      "style": "coord"
+    }
+  ],
+  "annotations": [],
+  "groups": [
+    {
+      "id": "g992157aa04194c",
+      "atoms": [
+        "a12c9384b8ab64e",
+        "ae8496abc7ff64b",
+        "a3b30ef6a5faa46",
+        "a45fa7e0b544548",
+        "aed0a9f52cc2641",
+        "centroidb7398a1957c845"
+      ],
+      "annotations": [],
+      "integral": true
+    },
+    {
+      "id": "g3921f801eae545",
+      "atoms": [
+        "ac679464272fb4b",
+        "aabba133e6a874b",
+        "ae8314e39d94242",
+        "ab997ca256d6c48",
+        "afff365c786014a",
+        "centroid6fb52a26121946"
+      ],
+      "annotations": [],
+      "integral": true
+    },
+    {
+      "id": "g97effac39e544a",
+      "atoms": [
+        "aefbca3b20ddf47",
+        "a8bcc0f17109b48",
+        "a7c22d9f33c0040",
+        "ac86e06ca31b349",
+        "ac89bb29644a44f",
+        "centroid69fa79f7864044"
+      ],
+      "annotations": [],
+      "integral": true
+    }
+  ],
+  "ligands": [
+    {
+      "id": "cp639ef1b948e644",
+      "type": "cp-anion",
+      "atomIds": [
+        "a12c9384b8ab64e",
+        "ae8496abc7ff64b",
+        "a3b30ef6a5faa46",
+        "a45fa7e0b544548",
+        "aed0a9f52cc2641"
+      ],
+      "centroidId": "centroidb7398a1957c845"
+    },
+    {
+      "id": "cpe0e8349d657d46",
+      "type": "cp-anion",
+      "atomIds": [
+        "ac679464272fb4b",
+        "aabba133e6a874b",
+        "ae8314e39d94242",
+        "ab997ca256d6c48",
+        "afff365c786014a"
+      ],
+      "centroidId": "centroid6fb52a26121946"
+    },
+    {
+      "id": "cp6c2e97e5a36747",
+      "type": "cp-anion",
+      "atomIds": [
+        "aefbca3b20ddf47",
+        "a8bcc0f17109b48",
+        "a7c22d9f33c0040",
+        "ac86e06ca31b349",
+        "ac89bb29644a44f"
+      ],
+      "centroidId": "centroid69fa79f7864044"
+    }
+  ]
+}

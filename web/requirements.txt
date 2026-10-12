@@ -1,0 +1,4 @@
+Flask==3.1.2
+gunicorn==23.0.0
+numpy==2.2.6
+rdkit==2025.3.6
