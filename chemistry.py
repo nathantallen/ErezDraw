@@ -61,9 +61,12 @@ def molecule(atoms,bonds):
     for i,a in enumerate(atoms):conformer.SetAtomPosition(i,(a['x']/40,-a['y']/40,0))
     mol.AddConformer(conformer)
     for b in bonds:
-        if b.get('style') in ('wedge','hash','hollowWedge'):
+        # Wedge/hash directions are only meaningful on single bonds; RDKit's stereo
+        # perception can hit internal precondition failures for wedged multiple bonds.
+        if b.get('style') in ('wedge','hash','hollowWedge') and b['order']==1:
             mol.GetBondBetweenAtoms(indices[b['a']],indices[b['b']]).SetBondDir(Chem.BondDir.BEGINDASH if b['style']=='hash' else Chem.BondDir.BEGINWEDGE)
-    Chem.AssignChiralTypesFromBondDirs(mol)
+    try:Chem.AssignChiralTypesFromBondDirs(mol)
+    except RuntimeError as e:raise ValueError('Wedge/hash stereo bonds could not be interpreted.') from e
     return mol,unknown
 
 

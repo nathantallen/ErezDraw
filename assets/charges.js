@@ -1,7 +1,9 @@
 /* Conservative drawing charge rules, with explicit manual overrides. */
 const drawingMetals=new Set('Li Be Na Mg Al K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv'.split(' '));
 function updateBondCharges(){
- const neighbors=a=>doc.bonds.filter(b=>b.a===a.id||b.b===a.id).map(b=>({b,a:ChemCore.atom(doc,b.a===a.id?b.b:b.a)}));
+ // Index once per pass; a per-atom bond scan made this quadratic on every commit and preview.
+ const byId=new Map(),bondsAt=new Map();for(const a of doc.atoms)if(!byId.has(a.id))byId.set(a.id,a);for(const b of doc.bonds)for(const key of [b.a,b.b]){if(!bondsAt.has(key))bondsAt.set(key,[]);bondsAt.get(key).push(b)}
+ const neighbors=a=>(bondsAt.get(a.id)||[]).map(b=>({b,a:byId.get(b.a===a.id?b.b:b.a)}));
  for(const a of doc.atoms){if(a.nodeType==='centroid'||drawingMetals.has(a.label)||a.chargeMode==='manual'||a.charge&&a.chargeMode!=='auto')continue;
   const ns=neighbors(a),organic=ns.filter(n=>!drawingMetals.has(n.a.label)&&n.b.style!=='coord'),v=organic.reduce((s,n)=>s+(n.b.order===4?1.5:n.b.order),0)+(a.explicitHs||0),metal=ns.some(n=>drawingMetals.has(n.a.label));let charge=null;
   if(a.label==='N'&&v===4)charge=1;else if(a.label==='O'&&v===3)charge=1;else if(a.label==='B'&&v===4)charge=-1;else if(a.label==='P'&&v===4&&organic.every(n=>n.b.order===1))charge=1;

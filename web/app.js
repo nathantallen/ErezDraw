@@ -28,7 +28,8 @@
   async function api(operation, extra = {}) {
     const response = await fetch('/api/' + operation, {method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({drawing:doc, selected:[...selection], ...extra})});
-    const result = await response.json();
+    let result;
+    try { result = await response.json(); } catch { throw Error('Unexpected server response (HTTP ' + response.status + ').'); }
     if (!response.ok) throw Error(result.error || 'Unable to process this structure.');
     return result;
   }
@@ -69,7 +70,7 @@
     if (smilesDialog.returnValue !== 'insert') return;
     const smiles = smilesDialog.querySelector('input').value.trim(); if (!smiles) return;
     try {
-    const fragment = await api('smiles', {smiles}); const before = snapshot();
+    const fragment = await api('smiles', {smiles}); const before = snapshot(); fitFragmentToBondLength(fragment.atoms, fragment.bonds);
     doc.atoms.push(...fragment.atoms); doc.bonds.push(...fragment.bonds);
     selection = new Set(fragment.atoms.map(a => a.id)); annSelection.clear(); commit(before); fit();
     } catch(error) { show('Insert from SMILES', error.message); }

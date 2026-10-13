@@ -1,5 +1,5 @@
 """Web adapters for the chemistry operations used by the desktop shell."""
-import copy, math
+import copy, math, urllib.error
 from functools import lru_cache
 from rdkit import Chem
 from rdkit.Chem.Draw import rdMolDraw2D
@@ -31,7 +31,8 @@ def run(operation, drawing, selected, data):
     if operation == 'pubchem-properties': return ops.lookup_structure_properties(drawing, selected)
     if operation == 'expand': return {'drawing': ops.expand(drawing, selected)}
     if operation == 'contract':
-        label = data.get('label', '').strip()
+        label = data.get('label', '')
+        label = label.strip() if isinstance(label, str) else ''
         if not label or len(label) > 40: raise ValueError('Enter an abbreviation of at most 40 characters.')
         return {'drawing': ops.contract(drawing, selected, label)}
     if operation == 'name-to-structure':
@@ -41,7 +42,9 @@ def run(operation, drawing, selected, data):
         return ops.from_smiles(smiles)
     if operation == 'lookup-name':
         if data.get('online') is not True: raise ValueError('Confirm PubChem lookup before sending this structure.')
-        return ops.lookup_structure_name(drawing, selected)
+        try: return ops.lookup_structure_name(drawing, selected)
+        except urllib.error.HTTPError as error: raise ValueError('PubChem is temporarily unavailable. Please try again later.') from error
+        except (urllib.error.URLError, TimeoutError) as error: raise ValueError('Could not reach PubChem. Check the server internet connection and try again.') from error
     if operation == 'mass':
         mode = data.get('mode', next(iter(MODES)))
         if mode not in MODES: raise ValueError('Invalid ionization mode.')

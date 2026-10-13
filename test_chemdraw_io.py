@@ -29,3 +29,22 @@ class ChemDrawImportTests(unittest.TestCase):
   r=import_chemdraw(b'<CDXML><page><n id="1" p="0 0"><t><s>A</s><s>B</s></t><fragment><n id="2" p="1 1"/></fragment></n><curve/></page></CDXML>');self.assertEqual(len(r['drawing']['atoms']),1);self.assertTrue(any('Nested' in w for w in r['warnings']));self.assertTrue(any('Rich' in w for w in r['warnings']));self.assertTrue(any('curve' in w for w in r['warnings']))
 
 if __name__=='__main__':unittest.main()
+
+class ChemDrawSafetyTests(unittest.TestCase):
+ def test_reject_entities_in_utf16(self):
+  data='<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE CDXML [<!ENTITY a "AAAA">]><CDXML><page><t p="1 1"><s>&a;</s></t></page></CDXML>'.encode('utf-16')
+  with self.assertRaisesRegex(ImportErrorDetail,'entities'):import_chemdraw(data)
+ def test_external_dtd_doctype_still_accepted(self):
+  data=b'<?xml version="1.0" encoding="UTF-8" ?>\n<!DOCTYPE CDXML SYSTEM "http://www.cambridgesoft.com/xml/cdxml.dtd" >\n<CDXML><page><n id="1" p="1 1"/></page></CDXML>'
+  self.assertEqual(import_chemdraw(data)['drawing']['atoms'][0]['label'],'C')
+ def test_deep_nesting_rejected_quickly(self):
+  import time
+  n=20000;data=('<CDXML><page>'+'<t p="1 1">'*n+'</t>'*n+'</page></CDXML>').encode();start=time.time()
+  with self.assertRaisesRegex(ImportErrorDetail,'limits'):import_chemdraw(data)
+  self.assertLess(time.time()-start,2)
+ def test_invalid_settings_self_bonds_and_elements(self):
+  import json
+  r=import_chemdraw(b'<CDXML LineWidth="nan" BondSpacing="18"><page><n id="1" p="0 0" Element="-3"/><n id="2" p="10 0"/><b B="1" E="1"/><b B="1" E="2"/></page></CDXML>')
+  json.dumps(r,allow_nan=False);d=r['drawing']
+  self.assertEqual(d['drawingSettings'],{'bondSpacing':.18});self.assertEqual(len(d['bonds']),1);self.assertEqual(d['atoms'][0]['label'],'*')
+  self.assertTrue(any('LineWidth' in w for w in r['warnings']));self.assertTrue(any('identical' in w for w in r['warnings']))

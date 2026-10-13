@@ -13,7 +13,9 @@ class WebTests(unittest.TestCase):
         self.assertIn(b'/web/app.js', response.data)
         self.assertIn(b'/web/style.css', response.data)
         for path in ('/health','/web/app.js','/web/style.css','/chemgeometry.js'):
-            self.assertEqual(self.client.get(path).status_code, 200)
+            # Close streamed file responses, as a WSGI server would.
+            with self.client.get(path) as asset:
+                self.assertEqual(asset.status_code, 200)
         self.assertEqual(self.client.get('/web/server.py').status_code, 404)
     def test_chemistry_roundtrip(self):
         body = {'drawing': self.drawing, 'selected': []}
@@ -74,5 +76,38 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/validate',json={'drawing':self.drawing},headers={'Origin':'http://other.invalid'}).status_code,403)
         self.assertEqual(self.client.post('/api/smiles',json={'smiles':'not a molecule'}).status_code,400)
         self.assertEqual(self.client.get('/../../chemistry.py').status_code,404)
+
+    def test_malformed_drawings_are_client_errors(self):
+        import copy
+        atom0, atom1 = self.drawing['atoms'][0]['id'], self.drawing['atoms'][1]['id']
+        def changed(edit):
+            drawing = copy.deepcopy(self.drawing); edit(drawing); return drawing
+        cases = [
+            lambda d: d['bonds'].append('not a bond'),
+            lambda d: d['bonds'].append({**d['bonds'][0], 'id': 'duplicate'}),
+            lambda d: d['bonds'].append({'id': 'self', 'a': atom0, 'b': atom0, 'order': 1, 'style': 'normal'}),
+            lambda d: d['atoms'][0].update(charge=10**30),
+            lambda d: d['atoms'][0].update(radical=-1),
+            lambda d: d['atoms'][0].update(explicitHs=5000, noImplicit=True),
+            lambda d: d['atoms'][0].update(abbreviation={'anchorId': 'missing', 'atoms': [], 'bonds': []}),
+            lambda d: d['atoms'].append({'id': 'c', 'label': '', 'x': 0, 'y': 0, 'nodeType': 'centroid', 'members': [atom0, 'missing']}),
+        ]
+        for edit in cases:
+            for op in ('validate', 'properties', 'analysis', 'add-hydrogens'):
+                response = self.client.post('/api/'+op, json={'drawing': changed(edit), 'selected': []})
+                self.assertEqual(response.status_code, 400, (op, response.json))
+        response = self.client.post('/api/contract', json={'drawing': self.drawing, 'selected': [atom1], 'label': 5})
+        self.assertEqual(response.status_code, 400)
+
+    def test_nmr_rows_accept_null_level_and_pubchem_outage_is_reported(self):
+        import urllib.error
+        from unittest.mock import patch
+        rows = [{'delta': 1.2, 'count': 3, 'attachedAtoms': [0], 'level': None, 'std': None}]
+        result = self.client.post('/api/nmr-simulate', json={'drawing': self.drawing, 'rows': rows, 'nucleus': '1H', 'mhz': 400})
+        self.assertEqual(result.status_code, 200, result.json)
+        with patch('structure_ops.urllib.request.urlopen', side_effect=urllib.error.URLError('offline')):
+            result = self.client.post('/api/lookup-name', json={'drawing': self.drawing, 'online': True})
+        self.assertEqual(result.status_code, 400)
+        self.assertIn('PubChem', result.json['error'])
 
 if __name__ == '__main__': unittest.main()

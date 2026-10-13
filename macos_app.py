@@ -21,6 +21,8 @@ ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
 
 class LocalServer:
     def __init__(self):
+        # Reject other Host headers so a DNS-rebinding page cannot reach the local API.
+        web_app.config['TRUSTED_HOSTS'] = ['127.0.0.1']
         self.server = make_server('127.0.0.1', 0, web_app, threaded=True)
         self.url = f'http://127.0.0.1:{self.server.server_port}'
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -100,7 +102,7 @@ class Editor(QMainWindow):
         script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
         script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
         script.setRunsOnSubFrames(False)
-        script.setSourceCode(bytes(channel_source.readAll()).decode()+'\n'+(ROOT/'macos/native.js').read_text())
+        script.setSourceCode(bytes(channel_source.readAll()).decode()+'\n'+(ROOT/'macos/native.js').read_text(encoding='utf-8'))
         self.page.scripts().insert(script)
         self.page.loadFinished.connect(self.load_finished)
         QApplication.instance().styleHints().colorSchemeChanged.connect(lambda _:self.sync_appearance())
@@ -121,7 +123,7 @@ class Editor(QMainWindow):
         autosave = self.storage/'autosave.chemjson'
         if autosave.exists() and not self.report:
             try:
-                drawing = json.loads(autosave.read_text())
+                drawing = json.loads(autosave.read_text(encoding='utf-8'))
                 self.js('nativeRestore('+json.dumps(drawing)+');')
                 self.current_drawing = json.dumps(drawing)
                 self.saved_drawing = self.current_drawing
@@ -177,7 +179,7 @@ class Editor(QMainWindow):
             self.current_drawing=value
             target=self.storage/'autosave.chemjson'
             temporary=target.with_suffix('.tmp')
-            temporary.write_text(value);temporary.replace(target)
+            temporary.write_text(value,encoding='utf-8');temporary.replace(target)
             self.setWindowTitle((drawing.get('name') or 'Untitled structure')+' — ErezDraw')
         except (ValueError,OSError) as error:
             self.statusBar().showMessage('Autosave failed: '+str(error),5000)
@@ -193,8 +195,8 @@ class Editor(QMainWindow):
                 imported=import_chemdraw(path.read_bytes(),path.stem)
                 expression='ChemCore.validate('+json.dumps(imported['drawing'])+')'
             elif suffix in ('.mol','.sdf'):
-                expression='ChemCore.fromMol('+json.dumps(path.read_text())+')'
-            else:expression='ChemCore.validate('+json.dumps(json.loads(path.read_text()))+')'
+                expression='ChemCore.fromMol('+json.dumps(path.read_text(encoding='utf-8-sig'))+')'
+            else:expression='ChemCore.validate('+json.dumps(json.loads(path.read_text(encoding='utf-8-sig')))+')'
         except (OSError,ValueError) as error:
             QMessageBox.warning(self,'Open Failed',str(error));return
         code="""(()=>{try{const next=%s;finishEditing();if((doc.atoms.length||doc.annotations.length)&&!confirm('Replace the current drawing? You can Undo to restore it.'))return '';replaceDoc(next);dirty=false;return JSON.stringify(doc)}catch(error){notify('Could not open drawing: '+error.message);return ''}})()""" % expression
