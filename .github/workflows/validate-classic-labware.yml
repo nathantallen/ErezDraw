@@ -24,6 +24,19 @@ jobs:
           python -m unittest test_glassware -v
           node verify-engine.cjs
           node verify-glassware.cjs
+      - name: Render original template contact sheet
+        run: |
+          python -m pip install cairosvg Pillow
+          python - <<'PY'
+          import base64, io
+          import cairosvg
+          from PIL import Image
+          cairosvg.svg2png(url='examples/Classic-Labware.svg',write_to='Classic-Labware.png',output_width=900)
+          image=Image.open('Classic-Labware.png').convert('RGB')
+          image.thumbnail((700,1400))
+          output=io.BytesIO();image.save(output,format='JPEG',quality=80)
+          print('CLASSIC_PREVIEW_BASE64='+base64.b64encode(output.getvalue()).decode())
+          PY
       - name: Package ready-to-open template documents
         run: |
           python - <<'PY'
@@ -35,6 +48,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ErezDraw-Classic-Labware
-          path: ErezDraw-Classic-Labware.zip
+          path: |
+            ErezDraw-Classic-Labware.zip
+            Classic-Labware.png
           if-no-files-found: error
           retention-days: 90
