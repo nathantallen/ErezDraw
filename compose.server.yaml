@@ -1,0 +1,16 @@
+services:
+  erezdraw:
+    image: erezdraw-web:template-picker-2026-10-15
+    restart: unless-stopped
+    ports:
+      - "${EREZDRAW_PORT:-8088}:8000"
+    environment:
+      EREZDRAW_TRUST_PROXY: "0"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g

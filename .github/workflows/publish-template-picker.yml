@@ -1,0 +1,92 @@
+name: Publish template picker packages
+on:
+  push:
+    branches: [release-template-picker-desktop-docker]
+    paths: ['.github/workflows/publish-template-picker.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-template-picker-packages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_SHA: 1d19612e5a3c6a62e27a7861d0cea04864ebc763
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm desktop build provenance
+        run: |
+          for run_id in 38771688250 38771688397; do
+            gh api "repos/$GH_REPO/actions/runs/$run_id" > run.json
+            python -c 'import json,os; r=json.load(open("run.json")); assert r["conclusion"]=="success" and r["head_sha"]==os.environ["SOURCE_SHA"]'
+          done
+      - uses: actions/download-artifact@v4
+        with:
+          name: ErezDraw-Windows-x64
+          path: packages/windows
+          github-token: ${{ github.token }}
+          run-id: 38771688250
+      - uses: actions/download-artifact@v4
+        with:
+          name: ErezDraw-macOS-AppleSilicon
+          path: packages/macos
+          github-token: ${{ github.token }}
+          run-id: 38771688397
+      - name: Validate and stage desktop packages
+        run: |
+          mkdir -p release/windows release/macos
+          python - <<'PY'
+          import json,pathlib,shutil,zipfile
+          root=pathlib.Path("packages")
+          for source,target in [(root/"windows/ErezDraw-Windows-x64.zip","release/windows/ErezDraw-Windows-x64.zip"),(root/"macos/dist/ErezDraw-macOS.zip","release/macos/ErezDraw-macOS-AppleSilicon.zip")]:
+              with zipfile.ZipFile(source) as z:
+                  assert z.testzip() is None
+                  assert any(p.endswith("web/templates.js") for p in z.namelist())
+                  cats=[p for p in z.namelist() if p.endswith("assets/glassware.json")]
+                  assert cats and len(json.loads(z.read(cats[0])))==68
+              shutil.copy2(source,target)
+          report=json.loads(next(root.rglob("macos-startup-check.json")).read_text())
+          assert report["status"]=="passed"
+          PY
+          (cd release/windows && sha256sum *.zip > SHA256SUMS.txt)
+          (cd release/macos && sha256sum *.zip > SHA256SUMS.txt)
+      - name: Build Docker image
+        run: docker build --label org.opencontainers.image.revision="$GITHUB_SHA" -t erezdraw-web:template-picker-2026-10-15 .
+      - name: Verify Docker runtime and template catalog
+        run: |
+          docker run -d --name erezdraw-test --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:8088:8000 erezdraw-web:template-picker-2026-10-15
+          trap 'docker logs erezdraw-test; docker rm -f erezdraw-test' EXIT
+          python - <<'PY'
+          import json,time,urllib.request
+          for i in range(60):
+              try:
+                  assert json.load(urllib.request.urlopen("http://127.0.0.1:8088/health"))["status"]=="ok"
+                  break
+              except Exception: time.sleep(1)
+          else: raise RuntimeError("Container startup failed")
+          catalog=json.load(urllib.request.urlopen("http://127.0.0.1:8088/api/catalog"))
+          assert len(catalog["glassware"])==68
+          assert sum(len(x["items"]) for x in catalog["templates"])==112
+          assert urllib.request.urlopen("http://127.0.0.1:8088/web/templates.js").status==200
+          print("Docker startup, 68 labware and 112 templates verified")
+          PY
+      - name: Package Docker for offline server deployment
+        run: |
+          mkdir -p release/docker
+          docker save erezdraw-web:template-picker-2026-10-15 | gzip > release/docker/ErezDraw-Docker-linux-amd64.tar.gz
+          cp compose.server.yaml release/docker/compose.yaml
+          cp DOCKER-SERVER.md release/docker/README.md
+          (cd release/docker && sha256sum *.tar.gz compose.yaml > SHA256SUMS.txt)
+      - name: Publish platform releases
+        run: |
+          printf '%s\n' 'Portable Windows x64 build with the press-hold-slide-release template picker, 37 ligands and 68 labware templates. Extract the entire ZIP and run ErezDraw/ErezDraw.exe. No Python needed. Windows is unsigned. Source: 1d19612e5a3c6a62e27a7861d0cea04864ebc763. Build and regression checks passed.' > windows-notes.md
+          printf '%s\n' 'Apple-silicon Mac build with the press-hold-slide-release template picker, 37 ligands and 68 labware templates. Extract and move ErezDraw.app to Applications. No Python needed. Ad-hoc signed, not notarized; first launch may require Privacy & Security → Open Anyway. Source: 1d19612e5a3c6a62e27a7861d0cea04864ebc763. Packaged launch and regression checks passed.' > macos-notes.md
+          printf '%s\n' 'Linux amd64 Docker image with the template picker, 37 ligands and 68 labware templates. Download the image archive, compose.yaml and README.md. Load with docker load, then docker compose up -d. Default port 8088. Container startup, catalog and static asset checks passed. Built from this release branch with Docker packaging fixes on top of desktop revision 1d19612e5a3c6a62e27a7861d0cea04864ebc763.' > docker-notes.md
+          gh release create windows-2026-10-15-template-picker release/windows/* --target "$SOURCE_SHA" --title "ErezDraw Windows — Template Picker" --notes-file windows-notes.md --prerelease
+          gh release create macos-2026-10-15-template-picker release/macos/* --target "$SOURCE_SHA" --title "ErezDraw macOS — Template Picker" --notes-file macos-notes.md --prerelease
+          gh release create docker-2026-10-15-template-picker release/docker/* --target "$GITHUB_SHA" --title "ErezDraw Docker — Template Picker" --notes-file docker-notes.md --prerelease
