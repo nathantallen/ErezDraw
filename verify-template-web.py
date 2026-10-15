@@ -1,7 +1,10 @@
 """Real Qt pointer events through the native Mac/web template cascade."""
-import os,time,tempfile
+import os,time,tempfile,sys
 from pathlib import Path
-os.environ.setdefault('QT_QPA_PLATFORM','offscreen');os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS','--no-sandbox --disable-gpu')
+# Exercise the actual Cocoa WebEngine backend on the macOS runner.
+if sys.platform=='darwin':os.environ.pop('QT_QPA_PLATFORM',None)
+else:os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
+os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS','--no-sandbox --disable-gpu')
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt,QPoint
 from PySide6.QtTest import QTest
@@ -20,7 +23,7 @@ def rect(selector):
 def point(selector):
  x,y=rect(selector);return QPoint(round(x),round(y))
 try:
- wait(lambda:w.loaded);wait(lambda:js("!!document.querySelector('.web-tool-grid [data-tool=templates]')"))
+ wait(lambda:w.loaded,seconds=120);wait(lambda:js("!!document.querySelector('.web-tool-grid [data-tool=templates]')"))
  js("finishEditing();doc=ChemCore.blank();render();")
  # Load once before the quick gesture; opening itself is asynchronous.
  js("document.querySelector('[data-tool=templates]').click()")
