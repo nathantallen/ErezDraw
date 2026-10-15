@@ -119,6 +119,9 @@ def install(editor, legacy, tool_icon):
         b=QToolButton();b.setFixedSize(29,35);b.setIconSize(QSize(23,23));b.setCheckable(True);b.setToolTip(label)
         b.setIcon(tool_icon(key))
         if key=='fragment':b.clicked.connect(lambda checked=False:editor.mass_fragmentation())
+        elif key=='templates':
+            from template_ui import install_template_menu
+            install_template_menu(editor,b)
         elif key=='ligands':b.clicked.connect(lambda checked=False:editor.ligand_dock.setVisible(not editor.ligand_dock.isVisible()))
         elif key.startswith('missing:'):b.setEnabled(False);b.setToolTip(label+' — not implemented')
         elif options:
@@ -175,3 +178,4 @@ def install(editor, legacy, tool_icon):
             if a.menu() and a.text() in ['Align','Distribute']:m.addMenu(a.menu())
         m.exec(editor.view.mapToGlobal(pos))
     editor.view.customContextMenuRequested.connect(context)
+

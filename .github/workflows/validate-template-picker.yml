@@ -1,0 +1,35 @@
+name: Validate template picker interaction
+on:
+  push:
+    branches: [template-picker-interaction]
+  pull_request:
+    paths: ['template_ui.py', 'template_catalog.py', 'web/templates.js', 'classic_ui.py']
+permissions:
+  contents: read
+jobs:
+  picker:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QTWEBENGINE_CHROMIUM_FLAGS: --disable-gpu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements-macos.txt
+      - name: Check native menu and shared drawing behavior
+        run: |
+          python -m unittest test_template_picker test_glassware -v
+          node verify-engine.cjs
+          node verify-glassware.cjs
+      - name: Check real pointer tracking through native Mac/web shell
+        run: python verify-template-web.py

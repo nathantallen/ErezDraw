@@ -212,8 +212,8 @@
   // Tool families and panels load independently from chemistry calculations.
   async function toolCatalog(){const response=await fetch('/web/catalog.json');if(!response.ok)throw Error('Unable to load drawing tools.');const {families}=await response.json(),palette=document.querySelector('.palette');palette.replaceChildren();const grid=el('div',null,{class:'web-tool-grid'});palette.append(grid);
     for(const [key,label,options] of families){const family=el('div',null,{class:'web-family'}),b=el('button',null,{type:'button',title:label,'aria-label':label,'data-tool':key,class:'tool'}),img=el('img',null,{src:'/web/icons/'+key+'.svg',alt:''});b.append(img);family.append(b);let chosen=key==='templates'?'ring6':key==='symbol'?'chargeUp':key;
-      const choose=()=>{if(key==='fragment')W.massSpectrum();else if(key==='ligands')openLigands();else setTool(chosen);};b.onclick=choose;
-      if(options){const open=el('button','▾',{type:'button',class:'web-family-toggle','aria-label':label+' variants'});family.append(open);open.onclick=()=>{const m=modal(label);const variants=el('div',null,{class:'web-variants'});m.body.append(variants);for(const [variant,name] of options){const v=el('button',null,{title:name,'aria-label':name});v.append(el('img',null,{src:'/web/icons/'+variant+'.svg',alt:''}),el('span',name));v.onclick=()=>{chosen=variant;img.src='/web/icons/'+variant+'.svg';b.dataset.tool=variant;setTool(variant);m.dialog.close();};variants.append(v);}m.open();};}grid.append(family);
+      const choose=()=>{if(key==='templates')return;else if(key==='fragment')W.massSpectrum();else if(key==='ligands')openLigands();else setTool(chosen);};b.onclick=choose;
+      if(key==='templates'){b.onclick=null;window.ErezTemplatePicker(b,catalog,item=>{if(item.kind==='tool')setTool(item.tool);else if(item.kind==='glassware')setGlasswareTemplate(item.template);else setLigandTemplate(item.template);notify('Click the canvas to place '+item.name+'.');});}else if(options){const open=el('button','▾',{type:'button',class:'web-family-toggle','aria-label':label+' variants'});family.append(open);open.onclick=()=>{const m=modal(label);const variants=el('div',null,{class:'web-variants'});m.body.append(variants);for(const [variant,name] of options){const v=el('button',null,{title:name,'aria-label':name});v.append(el('img',null,{src:'/web/icons/'+variant+'.svg',alt:''}),el('span',name));v.onclick=()=>{chosen=variant;img.src='/web/icons/'+variant+'.svg';b.dataset.tool=variant;setTool(variant);m.dialog.close();};variants.append(v);}m.open();};}grid.append(family);
     }
     const atoms=el('button','Periodic Table',{class:'web-palette-link'});atoms.onclick=openElements;palette.append(atoms);
   }
@@ -285,4 +285,5 @@
   $('bondLength').hidden=true;document.querySelector('label[for=bondLength]')?.remove();
   toolCatalog().catch(e=>W.show('Tools',e.message));
 })();
+
 

@@ -30,7 +30,7 @@ def headers(response):
 def index():
     html = (ROOT / 'assets/editor.html').read_text(encoding='utf-8')
     html = html.replace('</head>', '<link rel="stylesheet" href="/web/style.css"></head>')
-    html = html.replace('</body>', '<script src="/web/app.js"></script><script src="/web/desktop.js"></script><script src="/web/spectra.js"></script></body>')
+    html = html.replace('</body>', '<script src="/web/app.js"></script><script src="/web/templates.js"></script><script src="/web/desktop.js"></script><script src="/web/spectra.js"></script></body>')
     return html
 
 @app.get('/health')
@@ -39,7 +39,7 @@ def health():
 
 @app.get('/web/<path:name>')
 def web_asset(name):
-    return send_from_directory(ROOT / 'web', name) if name in ('app.js', 'style.css', 'desktop.js', 'spectra.js', 'nmr-worker.js', 'catalog.json') or (name.startswith('icons/') and name.endswith('.svg')) else ('Not found', 404)
+    return send_from_directory(ROOT / 'web', name) if name in ('app.js', 'style.css', 'templates.js', 'desktop.js', 'spectra.js', 'nmr-worker.js', 'catalog.json') or (name.startswith('icons/') and name.endswith('.svg')) else ('Not found', 404)
 
 @app.get('/<path:name>')
 def asset(name):
@@ -147,3 +147,4 @@ def error(error):
     if isinstance(error, (ValueError, KeyError, TypeError, IndexError)): return {'error': str(error)}, 400
     app.logger.exception('Chemistry request failed')
     return {'error': 'Unable to process this structure.'}, 500
+
