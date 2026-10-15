@@ -177,10 +177,11 @@ def parts():
 
 
 def glassware_catalog():
-    return [{'name':p.name,'category':p.category,'svg':p.svg(),'template':p.fragment()} for p in parts()]
+    classic=json.loads((Path(__file__).resolve().parent/'assets/classic-labware.json').read_text(encoding='utf-8'))
+    return classic+[{'name':p.name,'category':p.category,'svg':p.svg(),'template':p.fragment()} for p in parts()]
 
 
 if __name__ == '__main__':
     path=Path(__file__).resolve().parent/'assets/glassware.json'
     path.write_text(json.dumps(glassware_catalog(),ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-    print(f'Wrote {len(parts())} glassware templates to {path}')
+    print(f'Wrote {len(glassware_catalog())} glassware templates to {path}')

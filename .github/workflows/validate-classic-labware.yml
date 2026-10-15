@@ -1,0 +1,40 @@
+name: Validate classic labware templates
+on:
+  push:
+    branches: [classic-labware-reference]
+  pull_request:
+    paths: ['assets/classic-labware.json', 'glassware.py', 'test_glassware.py']
+permissions:
+  contents: read
+jobs:
+  templates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r web/requirements.txt
+      - name: Check editable template behavior and catalog
+        run: |
+          python -m unittest test_glassware -v
+          node verify-engine.cjs
+          node verify-glassware.cjs
+      - name: Package ready-to-open template documents
+        run: |
+          python - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('ErezDraw-Classic-Labware.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for name in ['examples/Classic-Labware.chemjson','examples/Classic-Labware.svg','examples/Glassware-and-Pilot-Equipment.chemjson','CLASSIC-LABWARE.md']:
+                  z.write(name,name.split('/')[-1])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ErezDraw-Classic-Labware
+          path: ErezDraw-Classic-Labware.zip
+          if-no-files-found: error
+          retention-days: 90
