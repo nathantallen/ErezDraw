@@ -33,3 +33,9 @@ jobs:
           node verify-glassware.cjs
       - name: Check real pointer tracking through native Mac/web shell
         run: python verify-template-web.py
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: template-picker-failure-${{ matrix.os }}
+          path: template-picker-failure.png
+          if-no-files-found: ignore
