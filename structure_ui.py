@@ -176,3 +176,24 @@ class StructureActions:
                 mol=Chem.MolFromSmiles(smiles);draw=rdMolDraw2D.MolDraw2DSVG(140,80);draw.drawOptions().noAtomLabels=haptic=='cp';draw.DrawMolecule(mol);draw.FinishDrawing();pixmap=QPixmap();pixmap.loadFromData(QByteArray(draw.GetDrawingText().encode()),'SVG');button=QToolButton();button.setIcon(QIcon(pixmap));button.setIconSize(QSize(140,80));button.setText(__import__('textwrap').fill(name,24));button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon);button.setFixedSize(185,120);button.setToolTip(name+' — select, then click/drag in the drawing. '+('Bond to the center handle.' if haptic else 'Bond to the donor atom.'))
                 button.clicked.connect(lambda checked=False,n=name:self.js('setLigandTemplate('+json.dumps(ligand_template(n))+');'));grid.addWidget(button,i//2,i%2)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,dock);dock.hide();a=dock.toggleViewAction();a.setText('Show Ligand Templates');self.menus['View'].addAction(a);self.actions['ligandTemplates']=a
+
+
+    def install_glassware_panel(self):
+        from PySide6.QtWidgets import QDockWidget,QScrollArea,QWidget,QGridLayout,QToolButton,QLineEdit
+        from PySide6.QtCore import QSize,QByteArray
+        from PySide6.QtGui import QIcon,QPixmap
+        from glassware import glassware_catalog
+        dock=QDockWidget('Glassware & Pilot Equipment',self);dock.setObjectName('GlasswareTemplates')
+        host=QWidget();layout=QVBoxLayout(host);search=QLineEdit();search.setPlaceholderText('Find glassware or pilot equipment');search.setClearButtonEnabled(True);layout.addWidget(search)
+        note=QLabel('Select a part, then press and drag to position it; release to place. Use selection handles to rotate or resize.');note.setWordWrap(True);layout.addWidget(note)
+        content=QWidget();grid=QGridLayout(content);scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setWidget(content);layout.addWidget(scroll);dock.setWidget(host)
+        buttons=[]
+        for i,item in enumerate(glassware_catalog()):
+            pixmap=QPixmap();pixmap.loadFromData(QByteArray(item['svg'].encode()),'SVG');button=QToolButton();button.setObjectName('glassware-'+str(i));button.setIcon(QIcon(pixmap));button.setIconSize(QSize(145,100));button.setText(__import__('textwrap').fill(item['name'],25));button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon);button.setFixedSize(185,145);button.setToolTip(item['category']+' — '+item['name'])
+            button.clicked.connect(lambda checked=False,f=item['template']:self.js('setGlasswareTemplate('+json.dumps(f)+');'));grid.addWidget(button,i//2,i%2);buttons.append((button,(item['category']+' '+item['name']).lower()))
+        def filter_parts(value):
+            visible=[button for button,text in buttons if value.lower() in text]
+            for button,_ in buttons:grid.removeWidget(button);button.hide()
+            for i,button in enumerate(visible):grid.addWidget(button,i//2,i%2);button.show()
+        search.textChanged.connect(filter_parts);self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,dock);dock.hide();self.glassware_dock=dock
+        action=dock.toggleViewAction();action.setText('Show Glassware Templates');self.menus['View'].addAction(action);self.actions['glasswareTemplates']=action

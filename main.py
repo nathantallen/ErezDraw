@@ -236,6 +236,7 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         install(self, toolbar, tool_icon)
         self.install_view_panels()
         self.install_ligand_panel()
+        self.install_glassware_panel()
         from keyboard_shortcuts import install as install_shortcuts
         install_shortcuts(self)
         self.count_label = QLabel('0 atoms · 0 bonds')
@@ -613,3 +614,4 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+

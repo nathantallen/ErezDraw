@@ -156,3 +156,11 @@ Useful verification commands: python -m unittest discover; node verify-engine.cj
 Use **View → Appearance → System, Light, or Dark**. The choice is saved across launches. System is the default on first launch and follows Windows or macOS appearance changes while the app is open. Drawing paper, chemical previews, and spectrum plots stay white; tool icons use light backgrounds for contrast.
 
 Windows appearance fix: rebuild from current source using Build-Windows.bat. The build runs appearance checks and produces dist/ErezDraw-Windows-x64.zip. Older precompiled Windows ZIPs do not contain these changes.
+
+
+## Glassware & Pilot Equipment
+
+View → Show Glassware Templates opens 31 grouped apparatus symbols, including
+Schlenk equipment, vacuum/inert-gas manifolds, jacketed pilot reactors and
+Nutsche filters. See [GLASSWARE.md](GLASSWARE.md) for use and the ready-to-open
+[template document](examples/Glassware-and-Pilot-Equipment.chemjson).
