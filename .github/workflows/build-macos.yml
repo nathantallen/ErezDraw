@@ -23,8 +23,9 @@ jobs:
         run: python -m pip install -r requirements-macos.txt
       - name: Test chemistry, native files, and drawing engine
         run: |
-          python -m unittest test_macos_app test_keyboard_shortcuts test_appearance test_chemdraw_io test_chemistry test_structure_ops test_spectra test_proton_models test_file_io -v
+          python -m unittest test_glassware test_macos_app test_keyboard_shortcuts test_appearance test_chemdraw_io test_chemistry test_structure_ops test_spectra test_proton_models test_file_io -v
           node verify-engine.cjs
+          node verify-glassware.cjs
       - name: Build, sign and launch packaged app
         run: python build_macos.py
       - name: Include installation instructions
@@ -41,3 +42,4 @@ jobs:
             build/macos-startup-check.json
           retention-days: 90
           if-no-files-found: error
+
