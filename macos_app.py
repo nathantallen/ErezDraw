@@ -144,6 +144,8 @@ class Editor(QMainWindow):
                 action=QAction(item['label'].split('  ')[0],self)
                 key=item['action']
                 if key in shortcuts:action.setShortcut(QKeySequence(shortcuts[key]))
+                from keyboard_shortcuts import LABEL_SHORTCUTS
+                if item['label'] in LABEL_SHORTCUTS:action.setShortcut(QKeySequence(LABEL_SHORTCUTS[item['label']]))
                 if key=='print':action.triggered.connect(self.print_document)
                 elif key=='open':action.triggered.connect(self.open_document)
                 else:action.triggered.connect(lambda checked=False,id=item['id']:self.js('nativeCommand('+json.dumps(id)+');'))

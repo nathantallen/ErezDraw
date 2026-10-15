@@ -231,6 +231,8 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         install(self, toolbar, tool_icon)
         self.install_view_panels()
         self.install_ligand_panel()
+        from keyboard_shortcuts import install as install_shortcuts
+        install_shortcuts(self)
         self.count_label = QLabel('0 atoms · 0 bonds')
         self.statusBar().addPermanentWidget(self.count_label)
 
@@ -557,8 +559,13 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         download.stateChanged.connect(finished)
         download.accept()
 
+    def page_setup(self):
+        from PySide6.QtPrintSupport import QPageSetupDialog
+        if not hasattr(self, "printer"):self.printer=QPrinter(QPrinter.PrinterMode.HighResolution)
+        QPageSetupDialog(self.printer,self).exec()
+
     def print_document(self):
-        self.printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        if not hasattr(self, "printer"):self.printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         if QPrintDialog(self.printer,self).exec():
             self.view.print(self.printer)
 

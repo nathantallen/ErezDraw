@@ -42,8 +42,8 @@ new QWebChannel(qt.webChannelTransport, channel => {
   about.innerHTML = '<h2>ErezDraw for macOS</h2><p>The complete Docker drawing application, packaged with a native Mac shell. Chemistry runs locally. PubChem lookups require an internet connection.</p><p>GPL-3.0-or-later. Independent software, not affiliated with ChemDraw.</p><button>Close</button>';
   about.querySelector('button').onclick=()=>about.close();
   document.addEventListener('keydown', e => {
-    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='o'){e.preventDefault();e.stopImmediatePropagation();native.openDocument();return;}
-    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='p') {e.preventDefault();e.stopImmediatePropagation();native.printDocument();}
+    if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='o'){e.preventDefault();e.stopImmediatePropagation();native.openDocument();return;}
+    if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='p') {e.preventDefault();e.stopImmediatePropagation();native.printDocument();}
   },true);
   let last = null;
   setInterval(() => {

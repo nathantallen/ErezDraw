@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(__dirname+'/assets/editor.html','utf8');
-const script=fs.readFileSync(__dirname+'/assets/charges.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/text.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/graphics.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/chemgeometry.js','utf8')+'\n'+html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const script=fs.readFileSync(__dirname+'/assets/shortcuts.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/charges.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/text.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/graphics.js','utf8')+'\n'+fs.readFileSync(__dirname+'/assets/chemgeometry.js','utf8')+'\n'+html.match(/<script>([\s\S]*?)<\/script>/)[1];
 new vm.Script(script);
 // Model checks run without a browser or chemical toolkit.
 const ctx={window:{}};vm.createContext(ctx);vm.runInContext(script.slice(0,script.indexOf('const $=id=>')),ctx);const core=ctx.window.ChemCore;
@@ -150,3 +150,23 @@ evaluate("doc=ChemCore.blank();doc.annotations=[{id:'t',type:'text',x:100,y:100,
 evaluate("doc=ChemCore.blank();doc.atoms=[{id:'n',x:0,y:0,label:'N',charge:0},...Array.from({length:4},(_,i)=>({id:'c'+i,x:i*40,y:40,label:'C',charge:0}))];doc.bonds=doc.atoms.slice(1).map(a=>({id:'b'+a.id,a:'n',b:a.id,style:'normal',order:1}));updateBondCharges()");assert.equal(state().atoms[0].charge,1);evaluate('doc.bonds.pop();updateBondCharges()');assert.equal(state().atoms[0].charge,0);evaluate("doc.atoms[0].charge=-1;doc.atoms[0].chargeMode='manual';updateBondCharges()");assert.equal(state().atoms[0].charge,-1);
 evaluate("doc=ChemCore.blank();selection.clear();annSelection.clear();const cp=placeCpAnion({x:250,y:250});const y=addAtom({x:300,y:300},'Y');addBond(ChemCore.atom(doc,cp.centroidId),y,1,'coord');updateBondCharges()");assert.equal(state().atoms.at(-1).charge,1);assert.equal(evaluate("labelElement(doc.atoms.at(-1),true).children.at(-1).attrs['data-metal-charge']"),'true');evaluate('doc.bonds=doc.bonds.filter(b=>b.style!==\'coord\');updateBondCharges()');assert.equal(state().atoms.at(-1).charge,0);
 console.log('PASS: Bézier anchors/tangents, curve styles, orbital/table preview and transforms, rich-run persistence/formatting, clipboard roundtrips and dynamic/manual charges.');
+
+// Keyboard event regression tests: exact modifiers and hotspot precedence.
+evaluate("doc=ChemCore.blank();selection.clear();annSelection.clear();gesture=null;pointerOnCanvas=true;lastPointer={x:100,y:100};addAtom(lastPointer);setTool('select')");
+function keyEvent(key,mods={}){return {key,target:{tagName:'SVG'},ctrlKey:false,metaKey:false,shiftKey:false,altKey:false,...mods}}
+testctx.keyEvent=keyEvent;
+assert.equal(evaluate("handleChemDrawKey(keyEvent('b'))"),true);assert.equal(state().atoms[0].label,'Br');
+evaluate("handleChemDrawKey(keyEvent('B',{shiftKey:true}))");assert.equal(state().atoms[0].label,'B');
+evaluate("handleChemDrawKey(keyEvent(' '))");assert.equal(state().atoms[0].label,'C');
+evaluate("handleChemDrawKey(keyEvent('1'))");assert.equal(state().bonds.length,1);assert.equal(state().bonds[0].order,1);
+evaluate("lastPointer={x:(doc.atoms[0].x+doc.atoms[1].x)/2,y:(doc.atoms[0].y+doc.atoms[1].y)/2};handleChemDrawKey(keyEvent('2'));handleChemDrawKey(keyEvent('l'))");assert.equal(state().bonds[0].order,2);assert.equal(state().bonds[0].doublePosition,'left');
+evaluate("handleChemDrawKey(keyEvent('b'))");assert.equal(state().bonds[0].style,'boldBond');
+assert.equal(evaluate("ErezShortcuts.resolve(keyEvent('v',{ctrlKey:true,shiftKey:true}))"),'flipVertical');
+assert.equal(evaluate("ErezShortcuts.resolve(keyEvent('c',{ctrlKey:true,shiftKey:true,altKey:true}))"),'align_horizontal');
+assert.equal(evaluate("ErezShortcuts.resolve(keyEvent('c',{metaKey:true,shiftKey:true}))"),'textCenter');
+assert.equal(evaluate("ErezShortcuts.resolve(keyEvent('c',{ctrlKey:true,altKey:true}))"),null);
+assert.equal(evaluate("handleChemDrawKey({key:'b',target:{tagName:'INPUT'},ctrlKey:true})"),false);
+evaluate("pointerOnCanvas=false;handleChemDrawKey(keyEvent('e'))");assert.equal(evaluate('tool'),'arrow');
+evaluate("handleChemDrawKey(keyEvent('X',{shiftKey:true}))");assert.equal(evaluate('tool'),'chain');
+assert.equal(evaluate("handleChemDrawKey(keyEvent('F6'))"),true);
+console.log('PASS: shortcut modifier resolution, macOS Command, focus guards, atom and bond hotspot edits, generic tool switching, function-key view commands.');
