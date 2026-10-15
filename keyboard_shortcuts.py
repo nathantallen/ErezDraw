@@ -34,7 +34,7 @@ def install(editor):
     editor.add_action(editor.menus['File'],'closeDocument','Close',editor.close)
     editor.add_action(editor.menus['File'],'pageSetup','Page Setup…',editor.page_setup)
     editor.add_action(editor.menus['Edit'],'repeatKeyboard','Repeat Keyboard Command',lambda:editor.js("keyboardCommand('repeat',true);"))
-    for key in ("flip", "flipVertical"):
+    for key in ("flip", "flipVertical", "bold", "italic", "underline"):
         editor.actions[key].triggered.disconnect()
         editor.actions[key].triggered.connect(lambda checked=False, key=key:editor.js("keyboardCommand("+repr(key)+",true);"))
     for key,sequence in MENU_SHORTCUTS.items():

@@ -24,6 +24,14 @@ class DesktopCommands(QObject):
                 else:editor.clipboard_copy(name=='cut')
             editor.js("(()=>{const a=document.activeElement;return !!(a&&(a!==document.getElementById('textEditor')||"+("true" if name=="selectAll" else "false")+")&&(a.isContentEditable||['INPUT','TEXTAREA'].includes(a.tagName)))})()",route)
             return
+        # Menu enable/check states refresh periodically; canvas state is authoritative.
+        if name in ('undo','redo'):
+            editor.command(name);return
+        local={'group','ungroup','flip','flipVertical','bold','italic','underline','plain','formula','subscript','superscript','textLeft','textCenter','textRight','textJustify'}
+        if name in local or name.startswith('align_'):
+            editor.js('keyboardCommand('+json.dumps(name)+',true);');return
+        if name=='rotate':editor.rotate_selection();return
+        if name=='scaleObjects':editor.scale_objects();return
         action=editor.actions.get(name)
         if action and action.isEnabled():action.trigger()
 

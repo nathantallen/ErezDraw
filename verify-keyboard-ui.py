@@ -74,6 +74,12 @@ assert json.loads(js('JSON.stringify(doc.atoms.slice(0,2))'))==original['atoms']
 assert js('undoStack.length')==0
 QTest.mouseRelease(target,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.ControlModifier,end)
 wait(lambda:js('undoStack.length')==1)
-js("action('undo')");assert json.loads(js('JSON.stringify(doc)'))==original
+# Simulate the native menu's stale disabled state immediately after the drag.
+w.timer.stop();w.actions['undo'].setEnabled(False)
+keys(Qt.Key.Key_Z);wait(lambda:js('doc.atoms.length')==2)
+assert json.loads(js('JSON.stringify(doc)'))==original
+js("selection=new Set(doc.atoms.map(a=>a.id));render();canvas.focus()")
+w.actions['group'].setEnabled(False)
+keys(Qt.Key.Key_G);wait(lambda:js('(doc.groups||[]).length')==1)
 print('PASS: real Ctrl+C/X/V through WebEngine, SVG/PNG/system/fragment clipboard, one dispatch, text fields and rich labels protected, single flip/repeat dispatch, native Save As bridge, real Ctrl-drag preview/commit/undo.')
 app.clipboard().clear();w.allow_close=True;w.close();app.processEvents()

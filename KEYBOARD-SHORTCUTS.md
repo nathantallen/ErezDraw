@@ -53,3 +53,5 @@ Selected-object Delete/Backspace now takes priority over the hovered-atom label-
 | Other modifier/mouse combinations | Not all manual conventions have a native integration regression test. Ctrl+Alt+Tab can also be intercepted by the OS. |
 
 TLC/query tool shortcuts remain intentionally absent because those tools were removed by request. Native macOS/Word execution is not implied by Linux or Windows runner checks.
+
+Native canvas commands use current engine state rather than periodically refreshed menu enable/check states, so fast Undo/Group after a selection or drag is not dropped. A native key test deliberately disables those menu actions to verify the fallback. Bold/Italic/Underline also toggle current text state rather than a stale toolbar check mark.
