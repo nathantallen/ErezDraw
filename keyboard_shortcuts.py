@@ -33,9 +33,9 @@ def install(editor):
     editor.actions['validate'].setShortcut(QKeySequence())
     editor.add_action(editor.menus['File'],'closeDocument','Close',editor.close)
     editor.add_action(editor.menus['File'],'pageSetup','Page Setup…',editor.page_setup)
-    editor.add_action(editor.menus['Edit'],'repeatKeyboard','Repeat Keyboard Command',lambda:editor.js("keyboardCommand('repeat');"))
+    editor.add_action(editor.menus['Edit'],'repeatKeyboard','Repeat Keyboard Command',lambda:editor.js("keyboardCommand('repeat',true);"))
     for key in ("flip", "flipVertical"):
         editor.actions[key].triggered.disconnect()
-        editor.actions[key].triggered.connect(lambda checked=False, key=key:editor.js("keyboardCommand("+repr(key)+");"))
+        editor.actions[key].triggered.connect(lambda checked=False, key=key:editor.js("keyboardCommand("+repr(key)+",true);"))
     for key,sequence in MENU_SHORTCUTS.items():
         if key in editor.actions:editor.actions[key].setShortcut(QKeySequence(sequence))

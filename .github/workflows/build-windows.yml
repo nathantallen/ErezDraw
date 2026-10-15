@@ -24,6 +24,7 @@ jobs:
         run: |
           python -m unittest test_keyboard_shortcuts -v
           node verify-engine.cjs
+          python verify-keyboard-ui.py
       - name: Build and verify executable
         run: python build_windows.py
       - name: Upload portable package

@@ -3,6 +3,10 @@ from pathlib import Path
 
 
 def check_runtime(root):
+    from desktop_keyboard import DesktopCommands
+    from PySide6.QtCore import QFile
+    if not QFile.exists(":/qtwebchannel/qwebchannel.js"):
+        raise RuntimeError("Native keyboard command transport is missing")
     import numpy as np
     from rdkit import Chem, rdBase
     from rdkit.Chem import Descriptors, rdDepictor
@@ -27,9 +31,9 @@ def check_runtime(root):
     refine_proton_shifts(benzene,rows)
     if rows[0]['delta']<6 or len(quantum_lines(benzene,rows,400)[0])!=1:
         raise RuntimeError('Proton model/quantum simulation failed')
-    for asset in ('assets/editor.html', 'assets/chemgeometry.js', 'assets/graphics.js', 'assets/text.js', 'assets/charges.js', 'assets/nmr/predictor.js'):
+    for asset in ('assets/editor.html', 'assets/app-icons/ErezDraw.ico', 'assets/shortcuts.js', 'assets/chemgeometry.js', 'assets/graphics.js', 'assets/text.js', 'assets/charges.js', 'assets/nmr/predictor.js'):
         if not (Path(root) / asset).is_file():
             raise RuntimeError('Missing packaged asset: ' + asset)
     return {'status': 'passed', 'numpy': np.__version__, 'rdkit': rdBase.rdkitVersion,
-            'checks': ['NumPy native runtime', 'RDKit coordinates/descriptors',
+            'checks': ['Native keyboard transport', 'NumPy native runtime', 'RDKit coordinates/descriptors',
                        'Structure interpretation/analysis', 'drawing/NMR assets']}

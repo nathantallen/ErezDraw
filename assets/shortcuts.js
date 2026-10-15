@@ -25,7 +25,8 @@ const ErezShortcuts = {
   tools:{' ':'select',x:'single',X:'chain',t:'text',T:'bracket',e:'arrow',E:'chargeUp',j:'benzene',J:'cyclopentadiene',u:'ring6',U:'ring5',G:'orbital_p_phase',l:'pen',L:'elements',k:'fragment'},
 };
 let keyboardRepeat=null,keyboardPreviousTool='single';
-function keyboardCommand(name) {
+function keyboardCommand(name, local=false) {
+  if(!local&&window.ErezDesktop?.dispatch(name))return true;
   const host=window.ErezWeb?.keyboardCommand;
   if(host&&host(name))return true;
   const alignment={textLeft:'left',textCenter:'center',textRight:'right',textJustify:'justify'};
@@ -53,6 +54,8 @@ function chemicalHotkey(e) {
   if(h?.kind==='atom'){
     const a=h.item;
     if(key==='Enter'){edit(a,'atom');return true}
+    if(key==='/'||key==='?'){selection=new Set([a.id]);annSelection.clear();keyboardCommand('atomProperties');return true}
+    if((key==='Delete'||key==='Backspace')&&(selection.size||annSelection.size))return false;
     if(key==='Delete'||key==='Backspace'||key===' '){const before=snapshot();a.label='C';delete a.textRuns;commit(before);return true}
     if(ErezShortcuts.labels[key]){const before=snapshot();a.label=ErezShortcuts.labels[key];delete a.textRuns;commit(before);return true}
     if(key==='+'||key==='-'){const before=snapshot();a.chargeMode='manual';a.charge=Math.max(-20,Math.min(20,(a.charge||0)+(key==='+'?1:-1)));commit(before);return true}
@@ -64,13 +67,14 @@ function chemicalHotkey(e) {
     return false;
   }
   if(h?.kind==='bond'){
+    if(key==='/'||key==='?'){selection=new Set([h.item.a,h.item.b]);annSelection.clear();keyboardCommand('bondProperties');return true}
     const b=h.item,styles={'1':[1,'normal'],'2':[2,'normal'],'3':[3,'normal'],d:[1,'dashed'],b:[1,'boldBond'],B:[2,'boldBond'],y:[1,'wavy'],w:[1,'wedge'],h:[1,'hash'],H:[1,'hashed']};
     if(styles[key]){const before=snapshot();[b.order,b.style]=styles[key];commit(before);return true}
     if(['l','c','r'].includes(key)){const before=snapshot();b.order=2;b.doublePosition={l:'left',c:'center',r:'right'}[key];commit(before);return true}
     if(['a','v','4','5','6','7','8'].includes(key)){placeRing(lastPointer,key==='v'?3:key==='a'?6:Number(key),key==='a');return true}
     return false;
   }
-  if(key==='k'){window.ErezWeb?.massSpectrum?window.ErezWeb.massSpectrum():notify('Use Structure > Mass Spectrometry Fragmentation.');return true}
+  if(key==='k'){if(window.ErezDesktop?.dispatch('massFragmentation'))return true;window.ErezWeb?.massSpectrum?window.ErezWeb.massSpectrum():notify('Use Structure > Mass Spectrometry Fragmentation.');return true}
   if(ErezShortcuts.tools[key]){setTool(ErezShortcuts.tools[key]);return true}
   return false;
 }

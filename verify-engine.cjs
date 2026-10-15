@@ -11,7 +11,8 @@ const invalid=core.clone(d);invalid.bonds[0].a='missing';assert.throws(()=>core.
 // Execute UI logic with a minimal DOM harness. No browser layout / rendering claim.
 class Element{constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attrs={};this.handlers={};this.style={};this.dataset={};this.value='';this.clientWidth=1000;this.clientHeight=650;this.options=[];this.classList={add(){},remove(){},toggle(){},contains(){return false}};}setAttribute(k,v){this.attrs[k]=String(v)}append(...v){this.children.push(...v)}replaceChildren(...v){this.children=v}addEventListener(n,f){this.handlers[n]=f}getScreenCTM(){return {inverse(){return {}}}}getBoundingClientRect(){return {x:0,y:0,left:0,top:0,width:1000,height:650}}setPointerCapture(){}focus(){}select(){}click(){}add(o){this.options.push(o)}showModal(){} }
 const els=new Map();const get=id=>{if(!els.has(id))els.set(id,new Element(id==='canvas'?'svg':'div'));return els.get(id)};get('bondLength').value='40';get('zoom').options=[{value:'1'}];get('elementInput').value='C';
-const dom={getElementById:get,querySelectorAll:()=>[],querySelector:()=>null,createElement:t=>new Element(t),createElementNS:(_,t)=>new Element(t),addEventListener(){}};
+const documentHandlers={};
+const dom={getElementById:get,querySelectorAll:()=>[],querySelector:()=>null,createElement:t=>new Element(t),createElementNS:(_,t)=>new Element(t),addEventListener(name,handler){(documentHandlers[name]??=[]).push(handler)}};
 const testctx={document:dom,window:{},console,localStorage:{getItem(){return null},setItem(){}},DOMPoint:class{constructor(x,y){this.x=x;this.y=y}matrixTransform(){return this}},ResizeObserver:class{observe(){}},setTimeout:()=>0,clearTimeout(){},Option:class{constructor(text,value){this.text=text;this.value=value}},confirm:()=>true,Blob,URL,XMLSerializer:class{serializeToString(){return '<svg/>'}}};vm.createContext(testctx);vm.runInContext(script,testctx);const evaluate=s=>vm.runInContext(s,testctx),state=()=>JSON.parse(evaluate('JSON.stringify(doc)'));
 // New documents use the ACS Document 1996 fixed bond length (19.2 px). These interaction checks use 40 px geometry, so the harness pins that document setting.
 evaluate("{const acsBlank=ChemCore.blank;ChemCore.blank=()=>{const d=acsBlank();d.drawingSettings.bondLength=40;return d};doc=ChemCore.blank()}");
@@ -153,7 +154,7 @@ console.log('PASS: Bézier anchors/tangents, curve styles, orbital/table preview
 
 // Keyboard event regression tests: exact modifiers and hotspot precedence.
 evaluate("doc=ChemCore.blank();selection.clear();annSelection.clear();gesture=null;pointerOnCanvas=true;lastPointer={x:100,y:100};addAtom(lastPointer);setTool('select')");
-function keyEvent(key,mods={}){return {key,target:{tagName:'SVG'},ctrlKey:false,metaKey:false,shiftKey:false,altKey:false,...mods}}
+function keyEvent(key,mods={}){return {key,target:{tagName:'SVG'},preventDefault(){},stopImmediatePropagation(){},ctrlKey:false,metaKey:false,shiftKey:false,altKey:false,...mods}}
 testctx.keyEvent=keyEvent;
 assert.equal(evaluate("handleChemDrawKey(keyEvent('b'))"),true);assert.equal(state().atoms[0].label,'Br');
 evaluate("handleChemDrawKey(keyEvent('B',{shiftKey:true}))");assert.equal(state().atoms[0].label,'B');
@@ -170,3 +171,46 @@ evaluate("pointerOnCanvas=false;handleChemDrawKey(keyEvent('e'))");assert.equal(
 evaluate("handleChemDrawKey(keyEvent('X',{shiftKey:true}))");assert.equal(evaluate('tool'),'chain');
 assert.equal(evaluate("handleChemDrawKey(keyEvent('F6'))"),true);
 console.log('PASS: shortcut modifier resolution, macOS Command, focus guards, atom and bond hotspot edits, generic tool switching, function-key view commands.');
+// Ctrl-drag duplicates the selection without moving originals or replacing the clipboard.
+evaluate("doc=ChemCore.blank();const a=addAtom({x:100,y:100}),b=addAtom({x:140,y:100});addBond(a,b);selection=new Set([a.id,b.id]);annSelection.clear();tool='select';clipboard={sentinel:true};undoStack=[];redoStack=[];zoom=1;showCrosshair=false;showRulers=false;");
+const originalDrag=state();
+get('canvas').handlers.pointerdown(event(100,100,{ctrlKey:true}));
+get('canvas').handlers.pointermove(event(102,101,{ctrlKey:true}));assert.deepEqual(state(),originalDrag);
+get('canvas').handlers.pointermove(event(200,180,{ctrlKey:true}));
+assert.equal(state().atoms.length,4);assert.deepEqual(state().atoms.slice(0,2),originalDrag.atoms);assert.equal(evaluate('undoStack.length'),0);
+get('canvas').handlers.pointerup(event(200,180,{ctrlKey:true}));
+assert.equal(evaluate('undoStack.length'),1);assert.equal(evaluate('clipboard.sentinel'),true);
+assert.equal(state().atoms[2].x,200);assert.equal(state().atoms[2].y,180);
+evaluate("action('undo')");assert.deepEqual(state(),originalDrag);
+evaluate("selection=new Set(doc.atoms.map(a=>a.id));tool='lasso'");
+get('canvas').handlers.pointerdown(event(100,100,{ctrlKey:true,shiftKey:true}));
+get('canvas').handlers.pointermove(event(200,150,{ctrlKey:true,shiftKey:true}));
+get('canvas').handlers.pointerup(event(200,150,{ctrlKey:true,shiftKey:true}));
+assert.equal(state().atoms.length,4);assert.equal(state().atoms[2].y,100);assert.equal(evaluate('tool'),'lasso');
+evaluate("action('undo');selection=new Set(doc.atoms.map(a=>a.id));tool='select'");
+get('canvas').handlers.pointerdown(event(120,100,{ctrlKey:true}));get('canvas').handlers.pointermove(event(220,200,{ctrlKey:true}));
+evaluate('cancelGesture();render()');assert.deepEqual(state(),originalDrag);assert.equal(evaluate('selection.size'),2);
+// Captions, arrows and integral groups get independent IDs, metadata and one Undo.
+evaluate("doc=ChemCore.blank();doc.annotations=[{id:'text1',type:'text',x:400,y:300,text:'Label',textRuns:[{text:'Label',bold:true}]},{id:'arr1',type:'arrow',x:450,y:300,x2:500,y2:300}];selection.clear();annSelection=new Set(['text1','arr1']);doc.groups=[{id:'group1',atoms:[],annotations:['text1','arr1'],integral:true}];tool='select';undoStack=[];");
+const annotationsBefore=state();
+get('canvas').handlers.pointerdown(event(450,300,{ctrlKey:true}));get('canvas').handlers.pointermove(event(500,400,{ctrlKey:true}));get('canvas').handlers.pointerup(event(500,400,{ctrlKey:true}));
+assert.equal(state().annotations.length,4);assert.equal(state().groups.length,2);assert.equal(new Set(state().annotations.map(a=>a.id)).size,4);assert.deepEqual(state().annotations.slice(0,2),annotationsBefore.annotations);
+assert.equal(state().annotations[3].x2,550);assert.equal(state().annotations[3].y2,400);
+evaluate("action('undo')");assert.deepEqual(state(),annotationsBefore);
+console.log('PASS: Ctrl-drag/Shift+Ctrl-drag duplication, threshold, original preservation, independent IDs/groups/annotations, unchanged clipboard, cancel and one Undo.');
+// Copying a Cp centroid preserves independent ligand membership.
+evaluate("doc=ChemCore.blank();selection.clear();annSelection.clear();placeCpAnion({x:300,y:300});selection=new Set(doc.atoms.map(a=>a.id));tool='select';zoom=1;undoStack=[];");
+const cpOriginal=state();
+get('canvas').handlers.pointerdown(event(300,300,{ctrlKey:true}));get('canvas').handlers.pointermove(event(450,350,{ctrlKey:true}));get('canvas').handlers.pointerup(event(450,350,{ctrlKey:true}));
+assert.equal(state().ligands.length,2);assert.notEqual(state().ligands[0].centroidId,state().ligands[1].centroidId);assert.deepEqual(state().atoms.slice(0,cpOriginal.atoms.length),cpOriginal.atoms);assert.equal(new Set(state().ligands.flatMap(l=>l.atomIds)).size,10);
+evaluate("action('undo')");assert.deepEqual(state(),cpOriginal);
+console.log('PASS: Ctrl-drag Cp duplication retains independent ligand and centroid identities.');
+
+// Native bridge owns copy; the canvas must not substitute its internal clipboard.
+const dispatched=[];testctx.window.ErezDesktop={dispatch:name=>{dispatched.push(name);return name==='copy'}};
+evaluate("clipboard={nativeSentinel:true};pointerOnCanvas=false;");
+documentHandlers.keydown.at(-1)(keyEvent('c',{ctrlKey:true}));
+assert.deepEqual(dispatched,['copy']);assert.equal(evaluate('clipboard.nativeSentinel'),true);
+assert.equal(evaluate("handleChemDrawKey(keyEvent('Delete'))"),false);
+delete testctx.window.ErezDesktop;
+console.log('PASS: keyboard Copy dispatches once to the native host; selected-object Delete is not swallowed by atom-label hotkeys.');

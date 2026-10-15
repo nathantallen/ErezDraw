@@ -44,7 +44,10 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         self.resize(1200, 800)
         self.setMinimumSize(650, 450)
         self.setWindowTitle(APP_NAME)
-        self.setWindowIcon(tool_icon('benzene'))
+        icon=ROOT/'assets/app-icons/ErezDraw.ico'
+        app_icon=QIcon(str(icon)) if icon.is_file() else tool_icon('benzene')
+        app.setWindowIcon(app_icon)
+        self.setWindowIcon(app_icon)
         self.path: Path | None = None
         self.saved_doc = None
         self.is_dirty = False
@@ -66,6 +69,8 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         self.page.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
         self.setCentralWidget(self.view)
         self.build_controls()
+        from desktop_keyboard import install as install_desktop_keyboard
+        install_desktop_keyboard(self)
         QApplication.instance().appearance.install_menu(self.menus['View'])
         if sys.platform=='darwin':
             self.menuBar().setNativeMenuBar(True)
@@ -251,6 +256,8 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
         if not ok:
             QMessageBox.critical(self, APP_NAME, 'The bundled drawing engine could not be loaded.')
             return
+        from desktop_keyboard import initialize_page
+        initialize_page(self)
         self.js('JSON.stringify(doc)', self.initial_document)
         self.timer.start()
         self.refresh()
@@ -438,7 +445,7 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
             QApplication.clipboard().setMimeData(mime)
             if cut:
                 self.command('delete')
-        self.js("(()=>{const text=textClipboard("+json.dumps(cut)+");if(text)return JSON.stringify(text);finishEditing();if(!selection.size&&!annSelection.size)return '';copy();const whole=doc;try{doc={...doc,...clipboard};return JSON.stringify({fragment:clipboard,svg:exportSVG().text});}finally{doc=whole}})();",copied)
+        self.js("(()=>{cancelGesture();const text=textClipboard("+json.dumps(cut)+");if(text)return JSON.stringify(text);finishEditing();if(!selection.size&&!annSelection.size)return '';copy();const whole=doc;try{doc={...doc,...clipboard};return JSON.stringify({fragment:clipboard,svg:exportSVG().text});}finally{doc=whole}})();",copied)
 
     def clipboard_paste(self):
         mime=QApplication.clipboard().mimeData()
@@ -452,7 +459,7 @@ class Editor(StructureActions,ViewPanels,GraphicsActions,MassActions,QMainWindow
             fragment=json.loads(bytes(mime.data('application/x-chemsketch-fragment')).decode('utf-8'))
         except (ValueError,UnicodeError):
             QMessageBox.warning(self,'Paste Failed','The clipboard fragment is invalid.');return
-        self.js("(()=>{try{const frag="+json.dumps(fragment)+";const checked=ChemCore.validate({format:'chemsketch-classic',version:1,name:'Clipboard',...frag});clipboard={atoms:checked.atoms,bonds:checked.bonds,annotations:checked.annotations,groups:checked.groups||[],ligands:checked.ligands||[]};paste();}catch(e){notify('Paste failed: '+e.message)}})();")
+        self.js("(()=>{try{cancelGesture();const frag="+json.dumps(fragment)+";const checked=ChemCore.validate({format:'chemsketch-classic',version:1,name:'Clipboard',...frag});clipboard={atoms:checked.atoms,bonds:checked.bonds,annotations:checked.annotations,groups:checked.groups||[],ligands:checked.ligands||[]};paste();}catch(e){notify('Paste failed: '+e.message)}})();")
 
     def new_document(self):
         def reset():
