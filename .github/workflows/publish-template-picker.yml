@@ -46,7 +46,10 @@ jobs:
           for source,target in [(root/"windows/ErezDraw-Windows-x64.zip","release/windows/ErezDraw-Windows-x64.zip"),(root/"macos/dist/ErezDraw-macOS.zip","release/macos/ErezDraw-macOS-AppleSilicon.zip")]:
               with zipfile.ZipFile(source) as z:
                   assert z.testzip() is None
-                  assert any(p.endswith("web/templates.js") for p in z.namelist())
+                  if "macos" in str(source):
+                      assert any(p.endswith("web/templates.js") for p in z.namelist())
+                  else:
+                      assert "ErezDraw/ErezDraw.exe" in z.namelist()
                   cats=[p for p in z.namelist() if p.endswith("assets/glassware.json")]
                   assert cats and len(json.loads(z.read(cats[0])))==68
               shutil.copy2(source,target)
