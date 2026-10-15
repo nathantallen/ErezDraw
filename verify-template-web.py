@@ -43,14 +43,14 @@ def run():
   QTest.mouseMove(target,point('.template-icon'));QTest.mouseRelease(target,Qt.MouseButton.LeftButton,pos=point('.template-icon'));app.processEvents()
   wait(lambda:js("!document.querySelector('.template-cascade')"));assert js("tool==='glasswareTemplate'"),js('tool')
   assert js('doc.annotations.length')==0,'Picking a template must not stamp it'
-  QTest.mouseClick(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));app.processEvents();assert js('doc.annotations.length')>0
-  before=js('JSON.stringify(doc)');QTest.mousePress(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));QTest.keyClick(target,Qt.Key.Key_Escape);QTest.mouseRelease(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));app.processEvents();assert js('JSON.stringify(doc)')==before
+  QTest.mouseClick(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));wait(lambda:js('doc.annotations.length')>0)
+  before=js('JSON.stringify(doc)');QTest.mousePress(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));wait(lambda:js('gesture!==null'));QTest.keyClick(target,Qt.Key.Key_Escape);wait(lambda:js('gesture===null'));QTest.mouseRelease(target,Qt.MouseButton.LeftButton,pos=point('#canvas'));app.processEvents();assert js('JSON.stringify(doc)')==before
   # Closed picker must not consume Escape intended for drawing gestures.
   assert js('gesture===null')
   print('PASS: native web pointer press/hold, hover category, release-to-select, separate canvas placement and Escape cancellation')
  except Exception as error:
   errors.append(error)
-  print('Pointer diagnostic:',js("JSON.stringify({dpr:devicePixelRatio,width:innerWidth,height:innerHeight,active:document.activeElement?.outerHTML,button:document.querySelector('[data-tool=templates]')?.getBoundingClientRect().toJSON()})"),flush=True)
+  print('Pointer diagnostic:',js("JSON.stringify({dpr:devicePixelRatio,width:innerWidth,height:innerHeight,active:document.activeElement?.tagName,button:document.querySelector('[data-tool=templates]')?.getBoundingClientRect().toJSON()})"),flush=True)
   w.grab().save('template-picker-failure.png')
  finally:
   w.allow_close=True;w.close();server.stop();app.processEvents();tmp.cleanup();app.quit()
