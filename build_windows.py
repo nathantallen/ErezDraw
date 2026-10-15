@@ -39,8 +39,8 @@ for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries:
     if entry.id!=3:continue
     for image in entry.directory.entries:
         for language in image.directory.entries:
-            data=language.data.struct
-            actual.add(hashlib.sha256(pe.get_data(data.OffsetToData,data.Size)).hexdigest())
+            resource_data=language.data.struct
+            actual.add(hashlib.sha256(pe.get_data(resource_data.OffsetToData,resource_data.Size)).hexdigest())
 pe.close()
 if not has_group or not expected.issubset(actual):raise SystemExit('Executable application icon verification failed.')
 print('Verified ErezDraw executable icon at '+str(count)+' sizes.')
