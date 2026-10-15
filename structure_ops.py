@@ -1,5 +1,6 @@
 """Structure commands. Chemical calculations never include geometric centroid nodes."""
-import copy, math, uuid, json, urllib.request, urllib.parse
+import copy, math, uuid, json, urllib.error, urllib.request, urllib.parse
+from functools import lru_cache
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors, rdDepictor
 from chemistry import molecule, chemical_graph, components, is_metal, ELEMENTS
@@ -36,18 +37,28 @@ def scope(drawing,selected=()):
 
 def from_smiles(smiles,center=(500,350),length=40):
     mol=Chem.MolFromSmiles(smiles)
-    if mol is None:raise ValueError('The structure could not be interpreted.')
+    if mol is None or not mol.GetNumAtoms():raise ValueError('The structure could not be interpreted.')
     rdDepictor.Compute2DCoords(mol,bondLength=length);Chem.WedgeMolBonds(mol,mol.GetConformer())
     pts=[mol.GetConformer().GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
     cx=sum(p.x for p in pts)/len(pts);cy=sum(p.y for p in pts)/len(pts);atoms=[]
     for i,a in enumerate(mol.GetAtoms()):
         if a.GetIsotope():raise ValueError('Isotopic structures are not supported by this document format.')
         atoms.append({'id':uid('a'),'x':center[0]+pts[i].x-cx,'y':center[1]-pts[i].y+cy,'label':a.GetSymbol(),'charge':a.GetFormalCharge(),'radical':a.GetNumRadicalElectrons(),**({'noImplicit':True,'explicitHs':a.GetNumExplicitHs()} if a.GetNoImplicit() else {})})
-    bonds=[{'id':uid('b'),'a':atoms[b.GetBeginAtomIdx()]['id'],'b':atoms[b.GetEndAtomIdx()]['id'],'order':4 if b.GetIsAromatic() else int(b.GetBondTypeAsDouble()),'style':'wedge' if b.GetBondDir()==Chem.BondDir.BEGINWEDGE else 'hash' if b.GetBondDir()==Chem.BondDir.BEGINDASH else 'normal'} for b in mol.GetBonds()]
+    bonds=[]
+    for b in mol.GetBonds():
+        kind=b.GetBondType()
+        if not b.GetIsAromatic() and kind not in (Chem.BondType.SINGLE,Chem.BondType.DOUBLE,Chem.BondType.TRIPLE,Chem.BondType.DATIVE):raise ValueError('Only single, double, triple, aromatic and dative bonds are supported.')
+        style='coord' if kind==Chem.BondType.DATIVE else 'wedge' if b.GetBondDir()==Chem.BondDir.BEGINWEDGE else 'hash' if b.GetBondDir()==Chem.BondDir.BEGINDASH else 'normal'
+        bonds.append({'id':uid('b'),'a':atoms[b.GetBeginAtomIdx()]['id'],'b':atoms[b.GetEndAtomIdx()]['id'],'order':4 if b.GetIsAromatic() else 1 if kind==Chem.BondType.DATIVE else int(b.GetBondTypeAsDouble()),'style':style})
     return {'atoms':atoms,'bonds':bonds}
 
+def _document_bond_length(drawing,default=40):
+    try:value=float((drawing.get('drawingSettings') or {}).get('bondLength',default))
+    except (TypeError,ValueError):return default
+    return value if math.isfinite(value) and 0<value<=1000 else default
+
 def expand(drawing,selected=()):
-    out=copy.deepcopy(drawing);ids=set(selected);changed=0
+    out=copy.deepcopy(drawing);ids=set(selected);changed=0;length=_document_bond_length(drawing)
     for a in list(out['atoms']):
         if ids and a['id'] not in ids:continue
         if a.get('abbreviation'):
@@ -56,10 +67,10 @@ def expand(drawing,selected=()):
             for b in frag['bonds']:b['id']=uid('b');b['a']=mapping[b['a']];b['b']=mapping[b['b']]
             for x in frag['atoms']:x['x']+=dx;x['y']+=dy
         elif a['label'] in ABBREVIATIONS:
-            frag=from_smiles(ABBREVIATIONS[a['label']],(a['x'],a['y']));old=frag['atoms'][0]['id'];dx=a['x']-frag['atoms'][0]['x'];dy=a['y']-frag['atoms'][0]['y']
+            frag=from_smiles(ABBREVIATIONS[a['label']],(a['x'],a['y']),length);old=frag['atoms'][0]['id'];dx=a['x']-frag['atoms'][0]['x'];dy=a['y']-frag['atoms'][0]['y']
             for x in frag['atoms']:
                 x['x']+=dx;x['y']+=dy
-                if x['id']==old:x['id']=a['id'];x['charge']=a['charge']
+                if x['id']==old:x['id']=a['id'];x['charge']=a.get('charge',0)
             for b in frag['bonds']:
                 if b['a']==old:b['a']=a['id']
                 if b['b']==old:b['b']=a['id']
@@ -78,18 +89,26 @@ def interpreted(drawing,selected=(),organic=False):
     Chem.SanitizeMol(mol)
     return fragment,graph,mol
 
+@lru_cache(maxsize=1)
+def _common_names():
+    # First dictionary entry wins for duplicate canonical SMILES, as before.
+    names={}
+    for name,smiles in COMMON.items():names.setdefault(Chem.MolToSmiles(Chem.MolFromSmiles(smiles)),name)
+    return names
+
 def properties(drawing,selected=()):
     fragment=scope(drawing,selected)
     if any(a.get('nodeType')=='centroid' for a in fragment['atoms']) and any(is_metal(a) for a in fragment['atoms']):
         query=pubchem_query_structure(fragment);mol=Chem.MolFromSmiles(query['smiles'])
     else:fragment,graph,mol=interpreted(drawing,selected)
     smiles=Chem.MolToSmiles(mol)
-    name=next((name for name,s in COMMON.items() if Chem.MolToSmiles(Chem.MolFromSmiles(s))==smiles),'')
+    name=_common_names().get(smiles,'')
     return {'name':name,'smiles':smiles,'formula':rdMolDescriptors.CalcMolFormula(mol),'weight':Descriptors.MolWt(mol),'ids':[a['id'] for a in fragment['atoms']],'bounds':{'x':min(a['x'] for a in fragment['atoms']),'y':max(a['y'] for a in fragment['atoms'])}}
 
 def hydrogens(drawing,selected=(),remove=False):
     frag,graph,mol=interpreted(drawing,selected);out=copy.deepcopy(drawing)
-    if any(a.get('abbreviation') for a in frag['atoms']) or any(a['label'] in ABBREVIATIONS for a in scope(drawing,selected)['atoms']):raise ValueError('Expand abbreviated labels first.')
+    # interpreted() returns the expanded fragment, so check the drawing's own atoms.
+    if any(a.get('abbreviation') or a['label'] in ABBREVIATIONS for a in scope(drawing,selected)['atoms']):raise ValueError('Expand abbreviated labels first.')
     if remove:
         removable=set()
         for a in graph['atoms']:
@@ -140,7 +159,12 @@ def pubchem(value,namespace,prop):
 def name_to_smiles(name,online=False):
     found=COMMON.get(name.strip().lower())
     if found:return found
-    if online:return pubchem(name,'name','SMILES')
+    if online:
+        try:return pubchem(name,'name','SMILES')
+        except urllib.error.HTTPError as e:
+            if e.code==404:raise ValueError('No PubChem compound matches this name.') from e
+            raise ValueError('PubChem is temporarily unavailable. Please try again later.') from e
+        except (urllib.error.URLError,TimeoutError) as e:raise ValueError('Could not reach PubChem. Check the server internet connection and try again.') from e
     raise ValueError('Name is not in the local dictionary. Enable PubChem lookup, or enter SMILES in the import field.')
 
 def analysis(drawing,selected=()):
@@ -201,7 +225,7 @@ def pubchem_query_structure(drawing,selected=()):
     return {'smiles':Chem.MolToSmiles(mol),'formula':rdMolDescriptors.CalcMolFormula(mol),'charge':Chem.GetFormalCharge(mol),'centroid':bool(virtual)}
 
 
-def lookup_structure_name(drawing,selected=(),property_tags="IUPACName,SMILES,MolecularFormula,Charge"):
+def lookup_structure_name(drawing,selected=(),property_tags="IUPACName,Title,SMILES,MolecularFormula,Charge"):
     query=pubchem_query_structure(drawing,selected)
     body=urllib.parse.urlencode({'smiles':query['smiles']}).encode('utf-8')
     url='https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/property/'+property_tags+'/JSON'
@@ -217,7 +241,7 @@ def lookup_structure_name(drawing,selected=(),property_tags="IUPACName,SMILES,Mo
         mol=Chem.MolFromSmiles(returned or '')
         if mol is None:continue
         if Chem.MolToSmiles(mol)!=expected or rdMolDescriptors.CalcMolFormula(mol)!=query['formula'] or Chem.GetFormalCharge(mol)!=query['charge']:continue
-        return {'name':hit['IUPACName'],'cid':hit['CID'],'query':query,'properties':hit}
+        return {'name':hit.get('IUPACName') or hit.get('Title') or '','cid':hit['CID'],'query':query,'properties':hit}
     raise ValueError('PubChem returned a different ligand/charge representation. No name was substituted. Check formal charges or enter a verified compound name manually.')
 
 

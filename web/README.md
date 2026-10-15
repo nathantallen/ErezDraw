@@ -35,7 +35,9 @@ HTTP LAN hosting supports file downloads and internal editor copy/paste;
 system clipboard APIs require HTTPS in most browsers.
 
 This is a LAN service without authentication. Keep access restricted to the
-intended network. Use an authenticated HTTPS reverse proxy before public exposure.
+intended network. Use an authenticated HTTPS reverse proxy before public exposure. Behind such a proxy,
+set `EREZDRAW_TRUST_PROXY=1` (and have the proxy send `X-Forwarded-Proto`/`X-Forwarded-Host`)
+so the same-origin check accepts the `https://` origin; leave it unset for direct LAN access.
 The container runs as a non-root user, with a read-only filesystem and temporary
 in-memory scratch space. No document database or server volume is required.
 

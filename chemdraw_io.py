@@ -4,6 +4,7 @@ objects/properties are reported; this is not a lossless ChemDraw round trip.
 """
 from __future__ import annotations
 import math,struct,xml.etree.ElementTree as ET
+from xml.parsers import expat
 from pathlib import Path
 from rdkit import Chem
 SCALE=4/3
@@ -16,6 +17,22 @@ def numbers(value,count=None):
     except (ValueError,AttributeError) as e:raise ImportErrorDetail('Invalid ChemDraw coordinate.') from e
     if count is not None and len(result)!=count or not all(math.isfinite(v) and abs(v)<750000 for v in result):raise ImportErrorDetail('Invalid ChemDraw coordinate count or range.')
     return result
+
+def _check_xml(data):
+    """Stream-check untrusted XML before building a tree: no entity declarations
+    (in any encoding), bounded nesting depth and element count."""
+    parser=expat.ParserCreate();depth=0;count=0
+    def start(name,attrs):
+        nonlocal depth,count
+        depth+=1;count+=1
+        if depth>100 or count>30000:raise ImportErrorDetail('ChemDraw document exceeds import limits.')
+    def end(name):
+        nonlocal depth
+        depth-=1
+    def entity(*args):raise ImportErrorDetail('XML entities are not allowed in drawing imports.')
+    parser.StartElementHandler=start;parser.EndElementHandler=end;parser.EntityDeclHandler=entity
+    try:parser.Parse(data,True)
+    except expat.ExpatError as e:raise ImportErrorDetail('Invalid ChemDraw XML: '+str(e)) from e
 
 def _cdx_tree(data):
     if len(data)<30 or data[:8]!=b'VjCD0100':raise ImportErrorDetail('Not a ChemDraw CDX file.')
@@ -103,12 +120,17 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
     if data.startswith(b'VjCD0100'):root,warnings=_cdx_tree(data)
     else:
         if b'<!ENTITY' in data.upper():raise ImportErrorDetail('XML entities are not allowed in drawing imports.')
+        _check_xml(data)
         try:root=ET.fromstring(data)
         except ET.ParseError as e:raise ImportErrorDetail('Invalid ChemDraw XML: '+str(e)) from e
         if root.tag!='CDXML':raise ImportErrorDetail('Not a ChemDraw CDXML document.')
     nodes=list(root.iter())
     if len(nodes)>30000:raise ImportErrorDetail('ChemDraw document exceeds import limits.')
-    parents={child:parent for parent in nodes for child in parent};fonts={f.get('id'):f.get('name','Arial') for f in root.iter('font')}
+    # Elements inside an atom node (labels, nested fragments), found in one pre-order pass.
+    inside_atom=set()
+    for parent in nodes:
+        if parent.tag=='n' or parent in inside_atom:inside_atom.update(parent)
+    fonts={f.get('id'):f.get('name','Arial') for f in root.iter('font')}
     colors=['#ffffff','#000000']
     for c in root.iter('color'):
         values=[max(0,min(255,round(float(c.get(k,'0'))*255))) for k in ('r','g','b')];colors.append('#%02x%02x%02x'%tuple(values))
@@ -130,7 +152,7 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
         if box:return [v*SCALE for v in numbers(box,4)[:2]]
         raise ImportErrorDetail('A drawing object has no 2D position.')
     for n in root.iter('n'):
-        if any(p.tag=='n' for p in _ancestors(n,parents)):
+        if n in inside_atom:
             warnings.add('Nested label fragments are retained as labels, not expanded chemical fragments.');continue
         x,y=point(n);nid=n.get('id')
         if not nid or nid in ids:raise ImportErrorDetail('Missing or duplicate ChemDraw atom ID.')
@@ -138,8 +160,8 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
         label_node=n.find('t');label=''.join(label_node.itertext()).strip() if label_node is not None else ''
         atomic=int(n.get('Element','6'))
         if not label:
-            try:label=Chem.GetPeriodicTable().GetElementSymbol(atomic)
-            except RuntimeError:label='*';warnings.add('Unknown element was imported as a placeholder.')
+            if 1<=atomic<=118:label=Chem.GetPeriodicTable().GetElementSymbol(atomic)
+            else:label='*';warnings.add('Unknown element was imported as a placeholder.')
         atom={'id':aid,'x':x,'y':y,'label':label[:40],'charge':int(n.get('Charge','0'))}
         if abs(atom['charge'])>20:raise ImportErrorDetail('Atom charge exceeds editor limits.')
         if label_node is not None:atom['textStyle']=style(label_node,True)
@@ -152,6 +174,8 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
     for b in root.iter('b'):
         if b.get('B') not in ids or b.get('E') not in ids:
             warnings.add('A bond to an unsupported/nested node was skipped.');continue
+        if b.get('B')==b.get('E'):
+            warnings.add('A bond with identical endpoints was skipped.');continue
         begin,end=ids[b.get('B')],ids[b.get('E')];order={'1':1,'2':2,'3':3,'1.5':4,'dative':1}.get(b.get('Order','1'))
         if order is None:raise ImportErrorDetail('Unsupported ChemDraw bond order '+str(b.get('Order'))+'.')
         display=b.get('Display','Solid')
@@ -164,7 +188,7 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
         if pair in pairs:raise ImportErrorDetail('Duplicate ChemDraw bond endpoints.')
         pairs.add(pair);drawing['bonds'].append(bond)
     for t in root.iter('t'):
-        if any(p.tag=='n' for p in _ancestors(t,parents)):continue
+        if t in inside_atom:continue
         text=''.join(t.itertext()).strip()
         if not text:continue
         x,y=point(t);drawing['annotations'].append({'id':unique('t'),'type':'text','x':x,'y':y,'text':text[:500],'textStyle':style(t)})
@@ -194,16 +218,15 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
         if any(True for _ in root.iter(tag)):warnings.add('Unsupported '+tag+' objects are not imported.')
     if len(list(root.iter('page')))>1:warnings.add('Multiple pages are combined in one drawing; page layout is not preserved.')
     if not drawing['atoms'] and not drawing['annotations']:raise ImportErrorDetail('No supported drawing objects were found.')
-    if len(drawing['atoms'])>5000 or len(drawing['bonds'])>10000 or len(drawing['annotations'])>1000:raise ImportErrorDetail('Drawing exceeds editor limits.')
+    if len(drawing['atoms'])>5000 or len(drawing['bonds'])>10000 or len(drawing['annotations'])>1000 or len(drawing.get('groups',[]))>1000:raise ImportErrorDetail('Drawing exceeds editor limits.')
     settings={}
-    for source,target in [('LineWidth','lineWidth'),('BoldWidth','boldWidth'),('BondLength','bondLength'),('MarginWidth','marginWidth'),('HashSpacing','hashSpacing')]:
-        if root.get(source):settings[target]=float(root.get(source))*SCALE
-    if root.get('BondSpacing'):settings['bondSpacing']=float(root.get('BondSpacing'))/100
+    for source,target,factor in [('LineWidth','lineWidth',SCALE),('BoldWidth','boldWidth',SCALE),('BondLength','bondLength',SCALE),('MarginWidth','marginWidth',SCALE),('HashSpacing','hashSpacing',SCALE),('BondSpacing','bondSpacing',.01)]:
+        if root.get(source):
+            value=float(root.get(source))*factor
+            # Same range the editor accepts for drawing settings; NaN/inf would also be invalid JSON.
+            if math.isfinite(value) and 0<value<=1000:settings[target]=value
+            else:warnings.add('Document setting '+source+' is out of range and was ignored.')
     if settings:drawing['drawingSettings']=settings
     return {'drawing':drawing,'warnings':sorted(warnings)}
-
-def _ancestors(node,parents):
-    while node in parents:
-        node=parents[node];yield node
 
 def read_chemdraw(path):return import_chemdraw(Path(path).read_bytes(),Path(path).stem)

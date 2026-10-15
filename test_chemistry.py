@@ -64,3 +64,11 @@ class PerspectiveCleanupTests(unittest.TestCase):
   self.assertEqual(result['drawing'],d)
   self.assertEqual(result['cleaned_components'],0)
   self.assertTrue(any('Perspective' in note for note in result['notes']))
+
+class StereoInterpretationTests(unittest.TestCase):
+ def test_wedged_multiple_bonds_do_not_crash_rdkit(self):
+  # RDKit raised an internal RuntimeError (precondition violation) for wedges on aromatic/double bonds.
+  from chemistry import molecule
+  atoms=[{'id':'0','label':'P','x':-20,'y':-40},{'id':'1','label':'B','x':-60,'y':40},{'id':'2','label':'P','x':20,'y':-20},{'id':'3','label':'C','x':-20,'y':-40},{'id':'4','label':'N','x':-20,'y':-60,'charge':1}]
+  bonds=[{'a':'3','b':'2','order':4,'style':'wedge'},{'a':'1','b':'2','order':1,'style':'normal'},{'a':'1','b':'3','order':1,'style':'hash'},{'a':'0','b':'3','order':2,'style':'wedge'},{'a':'3','b':'4','order':4,'style':'wedge'}]
+  mol,_=molecule(atoms,bonds);self.assertEqual(mol.GetNumAtoms(),5)

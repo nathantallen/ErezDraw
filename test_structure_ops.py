@@ -71,3 +71,28 @@ class PubChemCentroidIdentity(unittest.TestCase):
   bad={'PropertyTable':{'Properties':[{'CID':123,'SMILES':'CO','IUPACName':'methanol','MolecularFormula':'CH4O','Charge':0}]}}
   with patch('urllib.request.urlopen',return_value=io.BytesIO(json.dumps(bad).encode())):
    with self.assertRaisesRegex(ValueError,'different ligand/charge'):lookup_structure_name(drawing('CCO'))
+
+class RegressionCommands(unittest.TestCase):
+ def test_add_hydrogens_rejects_contracted_label(self):
+  # interpreted() expands contracted labels; the check previously inspected the expanded atoms and crashed.
+  d=drawing('CCOC(C)(C)C');c=contract(d,[a['id'] for a in d['atoms'][3:]],'tBuX')
+  for remove in (False,True):
+   with self.assertRaisesRegex(ValueError,'Expand abbreviated'):hydrogens(c,remove=remove)
+ def test_smiles_bond_types(self):
+  with self.assertRaises(ValueError):from_smiles('C$C')
+  bond=from_smiles('N->[Pt]')['bonds'][0];self.assertEqual((bond['order'],bond['style']),(1,'coord'))
+  with self.assertRaises(ValueError):from_smiles('.')
+ def test_pubchem_name_errors_are_user_errors(self):
+  import io,urllib.error
+  from unittest.mock import patch
+  missing=urllib.error.HTTPError('u',404,'Not Found',{},io.BytesIO(b''))
+  with patch('structure_ops.urllib.request.urlopen',side_effect=missing):
+   with self.assertRaisesRegex(ValueError,'No PubChem'):name_to_smiles('unlisted example',online=True)
+  with patch('structure_ops.urllib.request.urlopen',side_effect=urllib.error.URLError('offline')):
+   with self.assertRaisesRegex(ValueError,'reach PubChem'):name_to_smiles('unlisted example',online=True)
+ def test_expand_uses_document_bond_length(self):
+  from structure_ops import expand
+  d={'atoms':[{'id':'a1','x':100,'y':100,'label':'C','charge':0},{'id':'a2','x':119.2,'y':100,'label':'Et','charge':0}],'bonds':[{'id':'b1','a':'a1','b':'a2','order':1,'style':'normal'}],'annotations':[],'drawingSettings':{'bondLength':19.2}}
+  out=expand(d);pos={a['id']:a for a in out['atoms']}
+  new=[b for b in out['bonds'] if b['id']!='b1'][0];p,q=pos[new['a']],pos[new['b']]
+  self.assertAlmostEqual(((p['x']-q['x'])**2+(p['y']-q['y'])**2)**.5,19.2,places=1)

@@ -19,7 +19,11 @@ new QWebChannel(qt.webChannelTransport, channel => {
     native.saved(JSON.stringify(doc));
   };
   window.nativeRestore = drawing => {
-    doc = ChemCore.validate(drawing); updateBondCharges(); updateCentroids();
+    const next = ChemCore.validate(drawing);
+    // Drop an open label editor or live drag so neither commits the previous document afterwards.
+    if (editing) finishEditing(true);
+    cancelGesture();
+    doc = next; updateBondCharges(); updateCentroids();
     $('docName').value = doc.name; selection.clear(); annSelection.clear();
     undoStack = []; redoStack = []; dirty = false; fit();
   };

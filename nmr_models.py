@@ -38,7 +38,7 @@ def refine_proton_shifts(mol,rows):
         atom=mol.GetAtomWithIdx(parents[0]);special=None
         for ring,ipso in monoalkyl:
             if atom.GetIdx() in ring:special={1:7.16,2:7.24,3:7.16}.get(int(distances[atom.GetIdx(),ipso]))
-        broad=row['delta'] is None or row.get('level',0)<=2 or (row.get('std') or 0)>.5
+        broad=row['delta'] is None or (row.get('level') or 0)<=2 or (row.get('std') or 0)>.5
         impossible=atom.GetIsAromatic() and atom.GetSymbol()=='C' and row['delta'] is not None and not 5.5<row['delta']<10
         if special is not None or broad or impossible:
             estimate=special if special is not None else environment_shift(atom)
@@ -65,9 +65,16 @@ def quantum_lines(mol,rows,mhz,max_component=8):
             count=min(left,remaining.get(parent,0));spins.extend((group,parent,row['delta']) for _ in range(count));remaining[parent]-=count;left-=count
         if left:return None
     adjacency={i:set() for i in range(len(spins))};jvalues={}
+    # Couplings depend only on the parent carbons and vanish beyond three bonds;
+    # cache per atom pair instead of re-running a shortest-path search per spin pair.
+    distances=Chem.GetDistanceMatrix(mol);pair_couplings={}
+    def pair_coupling(a,b):
+        key=(a,b) if a<b else (b,a)
+        if key not in pair_couplings:pair_couplings[key]=0.0 if distances[a,b]>3 else coupling(mol,a,b)
+        return pair_couplings[key]
     for i in range(len(spins)):
         for j in range(i):
-            value=coupling(mol,spins[i][1],spins[j][1])
+            value=pair_coupling(spins[i][1],spins[j][1])
             if value:jvalues[i,j]=value;adjacency[i].add(j);adjacency[j].add(i)
     components=[];unseen=set(adjacency)
     while unseen:
