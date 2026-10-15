@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 import numpy  # Load the array runtime before RDKit.
 from PySide6.QtCore import QFile, QObject, QStandardPaths, QTimer, QUrl, Slot, Qt
-from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QIcon
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineScript
@@ -280,6 +280,7 @@ class Editor(QMainWindow):
 
 def main():
     app=QApplication(sys.argv)
+    app.setWindowIcon(QIcon(str(ROOT/'assets/app-icons/ErezDraw.ico')))
     app.setApplicationName('ErezDraw');app.setOrganizationName('ErezDraw')
     app.appearance=Appearance(app)
     report=Path(sys.argv[sys.argv.index('--self-test')+1]) if '--self-test' in sys.argv else None

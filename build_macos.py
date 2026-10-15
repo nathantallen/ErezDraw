@@ -1,5 +1,7 @@
 """Build and check an Apple-silicon app from the deployed Docker source."""
 import json
+import os
+import plistlib
 import platform
 import subprocess
 import sys
@@ -17,10 +19,22 @@ if platform.machine()!='arm64' or sys.version_info[:2]!=(3,12):raise SystemExit(
 # delete a previous framework tree through a file-provider-backed directory.
 with tempfile.TemporaryDirectory(prefix='erezdraw-native-build-') as staging:
     staging=Path(staging)
+    # Build the Finder/Dock icon from the same artwork embedded in Windows.
+    from PySide6.QtGui import QImage
+    iconset=staging/'ErezDraw.iconset';iconset.mkdir()
+    image=QImage(str(root/'assets/app-icons/ErezDraw.ico'))
+    if image.isNull():raise RuntimeError('Application icon could not be loaded')
+    for size in (16,32,128,256,512):
+        for scale in (1,2):
+            suffix='@2x' if scale==2 else ''
+            if not image.scaled(size*scale,size*scale).save(str(iconset/f'icon_{size}x{size}{suffix}.png')):
+                raise RuntimeError('Application icon could not be resized')
+    icon=staging/'ErezDraw.icns'
+    subprocess.run(['/usr/bin/iconutil','-c','icns',str(iconset),'-o',str(icon)],check=True)
     command=[sys.executable,'-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','ErezDraw','--target-arch','arm64','--osx-bundle-identifier','com.erezdraw.editor','--distpath',str(staging/'dist'),'--workpath',str(staging/'work'),'--collect-all','rdkit','--hidden-import','PySide6.QtSvg','--hidden-import','startup_check','--exclude-module','PyQt5','--exclude-module','PyQt6','--exclude-module','PySide2']
     for resource in ('assets','web','macos','macos-source.json','COPYING','THIRD-PARTY-NOTICES.md'):
         command.extend(['--add-data',str(root/resource)+':'+(resource if resource in ('assets','web','macos') else '.')])
-    command.append(str(root/'macos_app.py'))
+    command.extend(['--icon',str(icon),str(root/'macos_app.py')])
     subprocess.run(command,cwd=root,check=True)
     clean=staging/'ErezDraw.app'
     subprocess.run(['/usr/bin/ditto','--norsrc','--noextattr',str(staging/'dist/ErezDraw.app'),str(clean)],check=True)
@@ -30,7 +44,16 @@ with tempfile.TemporaryDirectory(prefix='erezdraw-native-build-') as staging:
         shutil.copytree(misplaced/'Resources',versions/'A/Resources',dirs_exist_ok=True)
         if (misplaced/'Helpers').is_dir():shutil.copytree(misplaced/'Helpers',versions/'A/Helpers',dirs_exist_ok=True)
         shutil.rmtree(misplaced)
-    subprocess.run(['codesign','--force','--deep','--sign','-',str(clean)],check=True)
+    resources=clean/'Contents/Resources'
+    revision=os.environ.get('GITHUB_SHA','local source build')
+    (resources/'BUILD-INFO.txt').write_text('ErezDraw macOS Apple silicon\nSource revision: '+revision+'\n',encoding='utf-8')
+    info=plistlib.loads((clean/'Contents/Info.plist').read_bytes())
+    bundled_icon=resources/info['CFBundleIconFile']
+    if not bundled_icon.is_file() or bundled_icon.read_bytes()!=icon.read_bytes():
+        raise RuntimeError('The application bundle icon is missing or incorrect')
+    for name in ('KEYBOARD-SHORTCUTS.md','MACOS.md'):
+        shutil.copyfile(root/name,resources/name)
+    subprocess.run(['codesign','--force' ,'--deep','--sign','-',str(clean)],check=True)
     subprocess.run(['codesign','--verify','--deep','--strict',str(clean)],check=True)
     report=root/'build/macos-startup-check.json'
     report.unlink(missing_ok=True)
