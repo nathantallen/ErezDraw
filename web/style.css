@@ -39,3 +39,14 @@ dialog{background:var(--web-bg);color:var(--web-ink);max-height:85vh;overflow:au
 .web-objectbar .web-alignment-button{width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;padding:3px;vertical-align:middle}.web-alignment-button svg{width:24px;height:24px;display:block}.web-alignment-button:focus-visible{outline:2px solid #4384d5;outline-offset:2px}
 
 .toolbar .web-toolbar-icon{width:32px;height:30px;padding:3px;display:inline-flex;align-items:center;justify-content:center}.web-toolbar-icon svg{width:24px;height:24px;display:block}.web-toolbar-icon:focus-visible{outline:2px solid #4384d5;outline-offset:2px}
+
+
+/* Template cascades use system colors so Mac Light/Dark/System remain readable. */
+.template-cascade{position:fixed;z-index:120;display:flex;max-width:calc(100vw - 8px);max-height:calc(100vh - 8px);background:Canvas;color:CanvasText;border:1px solid GrayText;border-radius:5px;box-shadow:0 5px 18px #0005;overflow:hidden}
+.template-categories{width:240px;max-width:38vw;overflow:auto;padding:4px;flex-shrink:0}
+.template-category{display:block;width:100%;padding:7px 8px;text-align:left;border:0;border-radius:3px;background:transparent;color:inherit;font:12px Arial}
+.template-category[aria-expanded=true],.template-category:hover,.template-category:focus{background:Highlight;color:HighlightText}
+.template-icons{display:grid;grid-template-columns:repeat(3,125px);gap:3px;padding:5px;max-height:440px;overflow:auto;align-content:start}
+.template-icon{width:125px;min-height:104px;padding:4px;border:1px solid transparent;border-radius:3px;background:Canvas;color:CanvasText;display:flex;flex-direction:column;align-items:center;justify-content:center;font:11px Arial}
+.template-icon svg{width:110px;height:70px;background:white;border-radius:2px}.template-icon span{line-height:1.15;max-width:115px}.template-icon:hover,.template-icon:focus{border-color:Highlight;outline:1px solid Highlight;background:Highlight;color:HighlightText}
+@media(max-width:680px){.template-icons{grid-template-columns:repeat(2,110px)}.template-icon{width:110px}.template-icon svg{width:95px}}

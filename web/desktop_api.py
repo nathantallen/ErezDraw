@@ -6,6 +6,7 @@ from rdkit.Chem.Draw import rdMolDraw2D
 import structure_ops as ops
 from ligands import LIGANDS, ligand_template
 from glassware import glassware_catalog
+from template_catalog import template_categories
 from mass_spec import fragmentation, MODES
 from nmr_models import refine_proton_shifts, quantum_lines
 from nmr_spectrum import estimate_couplings, multiplet_lines
@@ -94,5 +95,7 @@ def catalog():
         draw.DrawMolecule(mol); draw.FinishDrawing()
         ligands.append({'category': category, 'name': name, 'svg': draw.GetDrawingText(), 'template': ligand_template(name)})
     table = Chem.GetPeriodicTable()
-    return {'glassware': glassware_catalog(), 'ligands': ligands, 'elements': [{'number': i, 'symbol': table.GetElementSymbol(i), 'name': table.GetElementName(i), 'weight': table.GetAtomicWeight(i)} for i in range(1, 119)]}
+    glassware=glassware_catalog()
+    return {'templates': template_categories(ligands,glassware), 'glassware': glassware, 'ligands': ligands, 'elements': [{'number': i, 'symbol': table.GetElementSymbol(i), 'name': table.GetElementName(i), 'weight': table.GetAtomicWeight(i)} for i in range(1, 119)]}
+
 

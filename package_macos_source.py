@@ -5,6 +5,7 @@ import zipfile
 root=Path(__file__).resolve().parent
 manifest=json.loads((root/'macos-source.json').read_text())
 files=set(manifest['files'])
+files.update(['template_ui.py','template_catalog.py','web/templates.js','test_template_picker.py','verify-template-web.py','TEMPLATE-INTERACTION.md'])
 files.update(['assets/classic-labware.json','examples/Classic-Labware.chemjson','examples/Classic-Labware.svg','CLASSIC-LABWARE.md'])
 files.update(['examples/Glassware-and-Pilot-Equipment.chemjson','examples/Glassware-template-sheet.svg','glassware.py','assets/glassware.json','GLASSWARE.md','test_glassware.py','verify-glassware.cjs'])
 files.update(['assets/app-icons/ErezDraw.ico','desktop_keyboard.py','keyboard_shortcuts.py','assets/shortcuts.js','KEYBOARD-SHORTCUTS.md','test_keyboard_shortcuts.py'])
@@ -13,4 +14,5 @@ files.update(str(p.relative_to(root)) for p in (root/'macos').rglob('*') if p.is
 with zipfile.ZipFile(root/'dist/ErezDraw-macOS-Source.zip','w',zipfile.ZIP_DEFLATED) as z:
     for name in sorted(files):z.write(root/name,'ErezDraw-macOS-Source/'+name)
 print('Source archive: '+str(root/'dist/ErezDraw-macOS-Source.zip'))
+
 
