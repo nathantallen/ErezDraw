@@ -34,6 +34,7 @@ def run():
   wait(lambda:js("!!document.querySelector('.template-cascade')"));QTest.keyClick(w.view.focusProxy() or w.view,Qt.Key.Key_Escape)
   wait(lambda:js("!document.querySelector('.template-cascade')"))
   target=w.view.focusProxy() or w.view
+  js("document.querySelector(\"[data-tool=templates]\").scrollIntoView({block: \"nearest\"})")
   QTest.mousePress(target,Qt.MouseButton.LeftButton,pos=point('[data-tool=templates]'))
   wait(lambda:js("!!document.querySelector('.template-cascade')"))
   # Hover category and release over an icon without pressing that icon.
