@@ -1,0 +1,89 @@
+name: Publish desktop release
+on:
+  push:
+    branches: [release-glassware-desktop]
+    paths: ['.github/workflows/publish-desktop-release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-glassware-desktop-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: desktop-2026-10-15-glassware
+      SOURCE_SHA: e6d860e400b40cb367c656f17ed75e21b5cea94a
+    steps:
+      - name: Confirm successful builds match the release revision
+        shell: bash
+        run: |
+          for run_id in 38679758766 38679758786; do
+            gh api "repos/$GH_REPO/actions/runs/$run_id" > run.json
+            python -c 'import json,os; r=json.load(open("run.json")); assert r["conclusion"]=="success" and r["head_sha"]==os.environ["SOURCE_SHA"]'
+          done
+      - uses: actions/download-artifact@v4
+        with:
+          name: ErezDraw-Windows-x64
+          path: packages/windows
+          github-token: ${{ github.token }}
+          run-id: 38679758786
+      - uses: actions/download-artifact@v4
+        with:
+          name: ErezDraw-macOS-AppleSilicon
+          path: packages/macos
+          github-token: ${{ github.token }}
+          run-id: 38679758766
+      - name: Verify archives and stage release assets
+        shell: bash
+        run: |
+          mkdir release
+          python - <<'PY'
+          import json, pathlib, shutil, zipfile
+          root=pathlib.Path("packages")
+          windows=root/"windows/ErezDraw-Windows-x64.zip"
+          mac=root/"macos/dist/ErezDraw-macOS.zip"
+          with zipfile.ZipFile(windows) as z:
+              assert z.testzip() is None
+              assert "ErezDraw/ErezDraw.exe" in z.namelist()
+              assert any(p.endswith("assets/glassware.json") for p in z.namelist())
+          with zipfile.ZipFile(mac) as z:
+              assert z.testzip() is None
+              assert any("/Contents/MacOS/" in p for p in z.namelist())
+              assert any(p.endswith("assets/glassware.json") for p in z.namelist())
+          reports=list(root.rglob("macos-startup-check.json"))
+          assert len(reports)==1
+          report=json.loads(reports[0].read_text())
+          assert report.get("status")=="passed"
+          shutil.copy2(windows,"release/ErezDraw-Windows-x64.zip")
+          shutil.copy2(mac,"release/ErezDraw-macOS-AppleSilicon.zip")
+          PY
+          cd release
+          sha256sum *.zip > SHA256SUMS.txt
+      - name: Write release notes
+        shell: bash
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Desktop development build with 31 organometallic glassware and pilot-equipment templates.
+
+          Includes Schlenk glassware, J. Young tubes, cannula/septum accessories, vacuum/inert-gas manifolds, jacketed stirred reactors, glass filter reactors, Nutsche filters/filter dryers, large filter housings, and receivers. Open View → Show Glassware Templates.
+
+          **Windows x64:** Download ErezDraw-Windows-x64.zip, extract the entire archive, and open ErezDraw/ErezDraw.exe. Keep the _internal folder beside the executable. No Python installation is required.
+
+          **macOS Apple silicon (M1 or newer):** Download ErezDraw-macOS-AppleSilicon.zip, extract it, and move ErezDraw.app into Applications. No Python installation is required. The app is ad-hoc signed, not notarized. If macOS blocks it, use System Settings → Privacy & Security → Open Anyway. Built and launch-tested on macOS 15; macOS 27 has not been separately verified.
+
+          Both packages passed platform build/runtime checks and template/drawing regressions. Windows executable icon verification passed; macOS signature/icon and packaged-launch checks passed. Windows is unsigned. This is a development release; full ChemDraw parity is incomplete.
+
+          Source revision: e6d860e400b40cb367c656f17ed75e21b5cea94a
+          Windows build: https://github.com/nathantallen/ErezDraw/actions/runs/38679758786
+          macOS build: https://github.com/nathantallen/ErezDraw/actions/runs/38679758766
+          NOTES
+      - name: Publish GitHub release with both desktop packages
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" release/ErezDraw-Windows-x64.zip release/ErezDraw-macOS-AppleSilicon.zip release/SHA256SUMS.txt --repo "$GH_REPO" --target "$SOURCE_SHA" --title "ErezDraw Desktop — Glassware & Pilot Equipment" --notes-file release-notes.md --prerelease
