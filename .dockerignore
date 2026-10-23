@@ -2,6 +2,13 @@
 !Dockerfile
 !chemistry.py
 !structure_ops.py
+!ligands.py
+!glassware.py
+!template_catalog.py
+!mass_spec.py
+!nmr_models.py
+!nmr_spectrum.py
+!chemdraw_io.py
 !assets/
 !assets/**
 !web/
@@ -11,9 +18,3 @@
 **/__pycache__
 **/.DS_Store
 **/node_modules
-
-!ligands.py
-!mass_spec.py
-!nmr_models.py
-!nmr_spectrum.py
-!chemdraw_io.py

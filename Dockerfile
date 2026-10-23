@@ -4,7 +4,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libxrender1 libxext6 libsm6 libexpat1 && rm -rf /var/lib/apt/lists/*
 COPY web/requirements.txt /app/web/requirements.txt
 RUN pip install --no-cache-dir -r web/requirements.txt
-COPY chemistry.py structure_ops.py ligands.py mass_spec.py nmr_models.py nmr_spectrum.py chemdraw_io.py /app/
+COPY chemistry.py structure_ops.py ligands.py glassware.py template_catalog.py mass_spec.py nmr_models.py nmr_spectrum.py chemdraw_io.py /app/
 COPY assets /app/assets
 COPY web /app/web
 COPY COPYING THIRD-PARTY-NOTICES.md /app/
