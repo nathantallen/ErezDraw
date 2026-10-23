@@ -110,4 +110,40 @@ class WebTests(unittest.TestCase):
         self.assertEqual(result.status_code, 400)
         self.assertIn('PubChem', result.json['error'])
 
+
+class ValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+        self.drawing = {**from_smiles('CCO'), 'annotations': [], 'groups': [], 'ligands': [], 'name': 'Ethanol'}
+
+    def test_bond_without_style_is_accepted_everywhere(self):
+        drawing = {**self.drawing, 'bonds': [{k: v for k, v in b.items() if k != 'style'} for b in self.drawing['bonds']]}
+        for op in ('validate', 'properties', 'analysis', 'add-hydrogens', 'cleanup', 'mass', 'nmr-prepare'):
+            response = self.client.post('/api/'+op, json={'drawing': drawing, 'selected': []})
+            self.assertEqual(response.status_code, 200, (op, response.json))
+
+    def test_malformed_ligands_and_groups_are_rejected(self):
+        atom = self.drawing['atoms'][0]['id']
+        cases = [
+            {'ligands': 'not-a-list'},
+            {'ligands': [{}]},
+            {'ligands': [{'atomIds': 5, 'centroidId': atom}]},
+            {'ligands': [{'atomIds': [atom], 'centroidId': 'absent'}]},
+            {'ligands': [{'atomIds': ['absent'], 'centroidId': atom}]},
+            {'groups': 'not-a-list'},
+            {'groups': [{'atoms': 'nope'}]},
+            {'groups': [{'atoms': ['absent']}]},
+        ]
+        for edit in cases:
+            response = self.client.post('/api/cleanup', json={'drawing': {**self.drawing, **edit}, 'selected': []})
+            self.assertEqual(response.status_code, 400, (edit, response.json))
+            self.assertRegex(response.json['error'], 'ligand|group')
+
+    def test_wellformed_ligands_and_groups_pass(self):
+        atom = self.drawing['atoms'][0]['id']
+        drawing = {**self.drawing, 'ligands': [{'id': 'cp1', 'atomIds': [atom], 'centroidId': atom}],
+                   'groups': [{'id': 'g1', 'atoms': [atom], 'annotations': [], 'integral': True}]}
+        response = self.client.post('/api/cleanup', json={'drawing': drawing, 'selected': []})
+        self.assertEqual(response.status_code, 200, response.json)
+
 if __name__ == '__main__': unittest.main()

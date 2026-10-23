@@ -1,7 +1,7 @@
 import copy
 import math
 import unittest
-from chemistry import validate,cleanup
+from chemistry import validate,cleanup,components
 
 def drawing(labels,bonds):
  return {'format':'chemsketch-classic','version':1,'name':'test','atoms':[{'id':str(i),'label':s,'charge':0,'x':i*13,'y':(i%2)*7} for i,s in enumerate(labels)],'bonds':[{'id':'b'+str(i),'a':str(a),'b':str(b),'order':order,'style':style} for i,(a,b,order,style) in enumerate(bonds)],'annotations':[{'id':'t','type':'text','x':3,'y':4,'text':'untouched'}]}
@@ -72,3 +72,13 @@ class StereoInterpretationTests(unittest.TestCase):
   atoms=[{'id':'0','label':'P','x':-20,'y':-40},{'id':'1','label':'B','x':-60,'y':40},{'id':'2','label':'P','x':20,'y':-20},{'id':'3','label':'C','x':-20,'y':-40},{'id':'4','label':'N','x':-20,'y':-60,'charge':1}]
   bonds=[{'a':'3','b':'2','order':4,'style':'wedge'},{'a':'1','b':'2','order':1,'style':'normal'},{'a':'1','b':'3','order':1,'style':'hash'},{'a':'0','b':'3','order':2,'style':'wedge'},{'a':'3','b':'4','order':4,'style':'wedge'}]
   mol,_=molecule(atoms,bonds);self.assertEqual(mol.GetNumAtoms(),5)
+ def test_components_group_every_atom_and_bond_in_drawing_order(self):
+  d=drawing(['C','O','N','C','S'],[(0,1,1,'normal'),(2,3,1,'normal')])
+  parts=components(d)
+  self.assertEqual([[a['label'] for a in atoms] for atoms,_ in parts],[['C','O'],['N','C'],['S']])
+  self.assertEqual([[b['id'] for b in bonds] for _,bonds in parts],[['b0'],['b1'],[]])
+  self.assertEqual(sum(len(atoms) for atoms,_ in parts),len(d['atoms']))
+  self.assertEqual(sum(len(bonds) for _,bonds in parts),len(d['bonds']))
+ def test_components_reject_dangling_bond(self):
+  d=drawing(['C','O'],[(0,1,1,'normal')]);d['bonds'][0]['b']='missing'
+  with self.assertRaisesRegex(ValueError,'missing atom'):components(d)

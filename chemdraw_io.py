@@ -12,6 +12,17 @@ DISPLAY={0:'Solid',1:'Dash',2:'Hash',3:'WedgedHashBegin',4:'WedgedHashEnd',5:'Bo
 STYLES={'Solid':'normal','Dash':'dashed','Hash':'hashed','Bold':'boldBond','WedgeBegin':'wedge','WedgeEnd':'wedge','WedgedHashBegin':'hash','WedgedHashEnd':'hash','HollowWedgeBegin':'hollowWedge','HollowWedgeEnd':'hollowWedge','Wavy':'wavy'}
 class ImportErrorDetail(ValueError):pass
 
+def integer(value,what):
+    """CDXML attributes are file-controlled text; report a bad one as an import error."""
+    try:return int(value)
+    except (TypeError,ValueError) as e:raise ImportErrorDetail('Invalid ChemDraw '+what+'.') from e
+
+def decimal(value,what):
+    try:result=float(value)
+    except (TypeError,ValueError) as e:raise ImportErrorDetail('Invalid ChemDraw '+what+'.') from e
+    if not math.isfinite(result):raise ImportErrorDetail('Invalid ChemDraw '+what+'.')
+    return result
+
 def numbers(value,count=None):
     try:result=[float(v) for v in value.replace(',',' ').split()]
     except (ValueError,AttributeError) as e:raise ImportErrorDetail('Invalid ChemDraw coordinate.') from e
@@ -133,11 +144,11 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
     fonts={f.get('id'):f.get('name','Arial') for f in root.iter('font')}
     colors=['#ffffff','#000000']
     for c in root.iter('color'):
-        values=[max(0,min(255,round(float(c.get(k,'0'))*255))) for k in ('r','g','b')];colors.append('#%02x%02x%02x'%tuple(values))
+        values=[max(0,min(255,round(decimal(c.get(k,'0'),'color table')*255))) for k in ('r','g','b')];colors.append('#%02x%02x%02x'%tuple(values))
     def style(text_node,label=False):
         runs=list(text_node.iter('s'));first=runs[0] if runs else text_node;prefix='Label' if label else 'Caption'
-        face=int(first.get('face',root.get(prefix+'Face','0')));size=float(first.get('size',root.get(prefix+'Size','10' if label else '12')))*SCALE
-        color=int(first.get('color',root.get(prefix+'Color','1')))
+        face=integer(first.get('face',root.get(prefix+'Face','0')),'text style');size=decimal(first.get('size',root.get(prefix+'Size','10' if label else '12')),'text size')*SCALE
+        color=integer(first.get('color',root.get(prefix+'Color','1')),'text color')
         if len(runs)>1:warnings.add('Rich text runs are flattened to the first run style.')
         return {'font':fonts.get(first.get('font',root.get(prefix+'Font')),'Arial'),'size':max(6,min(144,size)),'color':colors[color] if 0<=color<len(colors) else '#000000','bold':bool(face&1),'italic':bool(face&2),'underline':bool(face&4)}
     drawing={'format':'chemsketch-classic','version':1,'name':name,'atoms':[],'bonds':[],'annotations':[]}
@@ -158,11 +169,11 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
         if not nid or nid in ids:raise ImportErrorDetail('Missing or duplicate ChemDraw atom ID.')
         aid=unique('a');ids[nid]=aid
         label_node=n.find('t');label=''.join(label_node.itertext()).strip() if label_node is not None else ''
-        atomic=int(n.get('Element','6'))
+        atomic=integer(n.get('Element','6'),'element number')
         if not label:
             if 1<=atomic<=118:label=Chem.GetPeriodicTable().GetElementSymbol(atomic)
             else:label='*';warnings.add('Unknown element was imported as a placeholder.')
-        atom={'id':aid,'x':x,'y':y,'label':label[:40],'charge':int(n.get('Charge','0'))}
+        atom={'id':aid,'x':x,'y':y,'label':label[:40],'charge':integer(n.get('Charge','0'),'atom charge')}
         if abs(atom['charge'])>20:raise ImportErrorDetail('Atom charge exceeds editor limits.')
         if label_node is not None:atom['textStyle']=style(label_node,True)
         else:atom['textStyle']=style(ET.Element('s'),True)
@@ -222,9 +233,11 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
     settings={}
     for source,target,factor in [('LineWidth','lineWidth',SCALE),('BoldWidth','boldWidth',SCALE),('BondLength','bondLength',SCALE),('MarginWidth','marginWidth',SCALE),('HashSpacing','hashSpacing',SCALE),('BondSpacing','bondSpacing',.01)]:
         if root.get(source):
-            value=float(root.get(source))*factor
+            # A cosmetic setting never fails the import; an unusable one is dropped.
+            try:value=decimal(root.get(source),'document setting')*factor
+            except ImportErrorDetail:value=None
             # Same range the editor accepts for drawing settings; NaN/inf would also be invalid JSON.
-            if math.isfinite(value) and 0<value<=1000:settings[target]=value
+            if value is not None and 0<value<=1000:settings[target]=value
             else:warnings.add('Document setting '+source+' is out of range and was ignored.')
     if settings:drawing['drawingSettings']=settings
     return {'drawing':drawing,'warnings':sorted(warnings)}

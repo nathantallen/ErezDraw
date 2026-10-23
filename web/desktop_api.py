@@ -16,7 +16,7 @@ def nmr_molecule(drawing, selected):
     _, graph, mol = ops.interpreted(drawing, selected, organic=True)
     if mol.GetNumAtoms() > 200:
         raise ValueError('Local NMR prediction is limited to 200 atoms per molecule.')
-    if any(b['style'] in ('wedge', 'hash', 'hollowWedge') for b in graph['bonds']):
+    if any(b.get('style') in ('wedge', 'hash', 'hollowWedge') for b in graph['bonds']):
         raise ValueError('Stereochemical NMR assignments are not supported. Wedge/hash stereo must be unspecified for this model.')
     if any(a.get('radical') for a in graph['atoms']):
         raise ValueError('Radical NMR prediction is outside the model.')

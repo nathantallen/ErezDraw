@@ -28,3 +28,7 @@ class SpectrumTests(unittest.TestCase):
   self.assertEqual(len(fragmentation(drawing('C1CCCCC1'))['rows']),1)
  def test_metals_rejected(self):
   with self.assertRaisesRegex(ValueError,'Metal'):fragmentation(drawing('[Y]'))
+ def test_hydrogen_free_molecule_rejects_hydrogen_loss_mode(self):
+  d=drawing('ClC(Cl)(Cl)Cl')
+  with self.assertRaisesRegex(ValueError,'removes a hydrogen'):fragmentation(d,mode='ESI [M-H]-')
+  self.assertTrue(fragmentation(d,mode='EI molecular radical cation')['rows'])

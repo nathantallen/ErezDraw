@@ -18,15 +18,18 @@ def components(drawing):
         if b['a'] not in atoms or b['b'] not in atoms:
             raise ValueError('Bond references a missing atom.')
         adjacency[b['a']].add(b['b']);adjacency[b['b']].add(b['a'])
-    unseen=set(atoms)
-    output=[]
+    unseen=set(atoms);group={};output=[]
     for a in drawing['atoms']:
         if a['id'] not in unseen:continue
-        ids={a['id']};pending=[a['id']];unseen.remove(a['id'])
+        index=len(output);pending=[a['id']];unseen.remove(a['id'])
         while pending:
-            for neighbor in adjacency[pending.pop()]:
-                if neighbor in unseen:unseen.remove(neighbor);ids.add(neighbor);pending.append(neighbor)
-        output.append(([x for x in drawing['atoms'] if x['id'] in ids],[b for b in drawing['bonds'] if b['a'] in ids and b['b'] in ids]))
+            current=pending.pop();group[current]=index
+            for neighbor in adjacency[current]:
+                if neighbor in unseen:unseen.remove(neighbor);pending.append(neighbor)
+        output.append(([],[]))
+    # Bucket in one pass: rescanning every atom and bond per component is quadratic.
+    for a in drawing['atoms']:output[group[a['id']]][0].append(a)
+    for b in drawing['bonds']:output[group[b['a']]][1].append(b)
     return output
 
 

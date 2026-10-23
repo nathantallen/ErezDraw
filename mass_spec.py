@@ -28,7 +28,10 @@ def fragmentation(drawing,selected=(),mode='EI molecular radical cation'):
         if ion_counts['H']<0:return None
         mass=neutral+delta*table.GetMostCommonIsotopeMass(1)-charge*ELECTRON_MASS
         return {'mz':mass,'formula':formula(ion_counts,charge),'drawingAtoms':[graph['atoms'][i]['id'] for i in sorted(indices)],'bond':bond,'neutralLoss':None if not complement else formula(sum((atom_counts[i] for i in complement),Counter())),'precursor':bond is None}
-    all_ids=set(range(mol.GetNumAtoms()));rows=[ion(all_ids)];seen=set()
+    all_ids=set(range(mol.GetNumAtoms()));precursor=ion(all_ids)
+    # [M-H]- needs an abstractable hydrogen; without one there is no precursor ion.
+    if precursor is None:raise ValueError('This ionization mode removes a hydrogen, and the molecule has none. Choose EI or [M+H]+.')
+    rows=[precursor];seen=set()
     # Ring opening alone does not separate an ion: enumerate only graph bridges.
     for bond in mol.GetBonds():
         if bond.GetBondType()!=Chem.BondType.SINGLE or bond.IsInRing() or bond.GetBeginAtom().GetSymbol()=='H' or bond.GetEndAtom().GetSymbol()=='H':continue

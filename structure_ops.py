@@ -83,7 +83,7 @@ def interpreted(drawing,selected=(),organic=False):
     fragment=scope(drawing,selected)
     if any(a.get('abbreviation') or a['label'] in ABBREVIATIONS for a in fragment['atoms']):fragment=expand(fragment)
     graph,virtual=chemical_graph(fragment)
-    if organic and (virtual or any(is_metal(a) for a in graph['atoms']) or any(b['style']=='coord' for b in graph['bonds'])):raise ValueError('NMR prediction supports organic molecules. Metal complexes and centroid bonding are outside the predictor’s model.')
+    if organic and (virtual or any(is_metal(a) for a in graph['atoms']) or any(b.get('style')=='coord' for b in graph['bonds'])):raise ValueError('NMR prediction supports organic molecules. Metal complexes and centroid bonding are outside the predictor’s model.')
     mol,unknown=molecule(graph['atoms'],graph['bonds'])
     if unknown:raise ValueError('Expand or correct these uninterpreted labels: '+', '.join(sorted({a['label'] for a in unknown})))
     Chem.SanitizeMol(mol)

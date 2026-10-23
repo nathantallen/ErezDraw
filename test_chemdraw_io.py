@@ -48,3 +48,15 @@ class ChemDrawSafetyTests(unittest.TestCase):
   json.dumps(r,allow_nan=False);d=r['drawing']
   self.assertEqual(d['drawingSettings'],{'bondSpacing':.18});self.assertEqual(len(d['bonds']),1);self.assertEqual(d['atoms'][0]['label'],'*')
   self.assertTrue(any('LineWidth' in w for w in r['warnings']));self.assertTrue(any('identical' in w for w in r['warnings']))
+ def test_malformed_numeric_attributes_report_import_errors(self):
+  cases=[(b'<CDXML><page><n id="1" p="0 0" Element="carbon"/></page></CDXML>','element number'),
+         (b'<CDXML><page><n id="1" p="0 0" Charge="minus"/></page></CDXML>','atom charge'),
+         (b'<CDXML><page><n id="1" p="0 0"><t><s size="big">C</s></t></n></page></CDXML>','text size'),
+         (b'<CDXML><page><n id="1" p="0 0"><t><s face="bold">C</s></t></n></page></CDXML>','text style'),
+         (b'<CDXML><colortable><color r="red" g="0" b="0"/></colortable><page><n id="1" p="0 0"/></page></CDXML>','color table')]
+  for data,message in cases:
+   with self.assertRaisesRegex(ImportErrorDetail,message):import_chemdraw(data)
+ def test_unusable_document_setting_is_warned_not_fatal(self):
+  r=import_chemdraw(b'<CDXML BondLength="long"><page><n id="1" p="0 0" Element="6"/></page></CDXML>')
+  self.assertNotIn('bondLength',r['drawing'].get('drawingSettings',{}))
+  self.assertTrue(any('BondLength' in w for w in r['warnings']))

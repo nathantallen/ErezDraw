@@ -98,7 +98,10 @@ def quantum_lines(mol,rows,mhz,max_component=8):
             group=spins[spin][0]
             if group not in operators:operators[group]=np.zeros((size,size))
             lower=states[((states>>i)&1)==1];operators[group][lower^(1<<i),lower]+=1
-        transformed={g:vectors.T@op@vectors for g,op in operators.items()};total=sum(transformed.values());strength=total*total;weight=sum(x*x for x in transformed.values());valid=(strength>1e-8)&(weight>1e-10)
+        # numpy 2.x matmul leaks BLAS floating-point flags even for finite operands,
+        # so ignore them here rather than print spurious warnings on every simulation.
+        with np.errstate(all='ignore'):transformed={g:vectors.T@op@vectors for g,op in operators.items()}
+        total=sum(transformed.values());strength=total*total;weight=sum(x*x for x in transformed.values());valid=(strength>1e-8)&(weight>1e-10)
         for dest,source in zip(*np.where(valid)):
             delta=round(float((energy[dest]-energy[source])/mhz),8)
             for group,amplitude in transformed.items():

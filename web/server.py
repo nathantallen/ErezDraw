@@ -100,6 +100,26 @@ def drawing_input(data):
             total += len(fragment['atoms'])
             if fragment.get('anchorId', atom['id']) not in inner or total > 2000 or len(fragment['bonds']) > 4000:
                 raise ValueError('Invalid contracted fragment.')
+    # cleanup() and scope() read these, and every operation echoes them back to the
+    # client, so they get the same treatment as atoms and bonds.
+    ligands = drawing.get('ligands', [])
+    if not isinstance(ligands, list) or len(ligands) > 2000:
+        raise ValueError('Invalid ligand list.')
+    for ligand in ligands:
+        if not isinstance(ligand, dict) or not isinstance(ligand.get('atomIds'), list):
+            raise ValueError('Invalid ligand attachment.')
+        if any(not isinstance(member, str) or member not in ids for member in ligand['atomIds']):
+            raise ValueError('Invalid ligand attachment.')
+        if not isinstance(ligand.get('centroidId'), str) or ligand['centroidId'] not in ids:
+            raise ValueError('Invalid ligand attachment.')
+    groups = drawing.get('groups', [])
+    if not isinstance(groups, list) or len(groups) > 2000:
+        raise ValueError('Invalid group list.')
+    for group in groups:
+        if not isinstance(group, dict) or not isinstance(group.get('atoms'), list):
+            raise ValueError('Invalid group.')
+        if any(not isinstance(member, str) or member not in ids for member in group['atoms']):
+            raise ValueError('Invalid group.')
     selected = data.get('selected', [])
     if not isinstance(selected, list) or any(x not in ids for x in selected):
         raise ValueError('Invalid selection.')
