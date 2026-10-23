@@ -28,6 +28,26 @@ errors=[]
 def run():
  try:
   wait(lambda:w.loaded,seconds=120);wait(lambda:js("!!document.querySelector('.web-tool-grid [data-tool=templates]')"))
+  # Keyboard navigation in the nonmodal picker must never edit the selection.
+  js("finishEditing();doc=ChemCore.blank();const a=addAtom({x:200,y:200}),b=addAtom({x:240,y:200});addBond(a,b);selection=new Set([a.id,b.id]);annSelection.clear();undoStack=[];redoStack=[];render();document.querySelector('[data-tool=templates]').focus();")
+  original=js('JSON.stringify(doc)')
+  target=w.view.focusProxy() or w.view
+  QTest.keyClick(target,Qt.Key.Key_Down)
+  wait(lambda:js("document.activeElement?.classList.contains('template-category')"))
+  for key in (Qt.Key.Key_Down,Qt.Key.Key_Up,Qt.Key.Key_Right,Qt.Key.Key_Left,Qt.Key.Key_Delete):
+   QTest.keyClick(target,key);QTest.qWait(50)
+   assert js('JSON.stringify(doc)')==original,'Picker key changed the drawing'
+   assert js('undoStack.length')==0,'Picker key added undo history'
+  QTest.keyClick(target,Qt.Key.Key_Right)
+  wait(lambda:js("document.activeElement?.classList.contains('template-icon')"))
+  QTest.keyClick(target,Qt.Key.Key_Return)
+  wait(lambda:js("!document.querySelector('.template-cascade')"))
+  assert js('JSON.stringify(doc)')==original
+  # Normal canvas nudging still works after the picker is closed.
+  js('canvas.focus()');QTest.keyClick(target,Qt.Key.Key_Down)
+  wait(lambda:js('undoStack.length')==1)
+  js("action('undo')");assert js('JSON.stringify(doc)')==original
+  print('PASS: picker keyboard navigation/selection preserves drawing and undo; canvas keys work after closing')
   js("finishEditing();doc=ChemCore.blank();render();")
   # Load once before the quick gesture; opening itself is asynchronous.
   js("document.querySelector('[data-tool=templates]').click()")

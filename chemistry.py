@@ -36,12 +36,21 @@ def is_metal(a):
 
 def molecule(atoms,bonds):
     rw=Chem.RWMol();indices={};unknown=[]
+    # Dative bonds do not satisfy the donor's RDKit valence. A metal-bound
+    # halide is not a hydrogen halide: suppress inferred H on these ligands,
+    # without suppressing H on other donors (water, ammonia, etc.).
+    by_id={a['id']:a for a in atoms}
+    bound_halides=set()
+    for bond in bonds:
+        for ligand_id,metal_id in ((bond['a'],bond['b']),(bond['b'],bond['a'])):
+            if by_id[ligand_id]['label'] in {'F','Cl','Br','I','At','Ts'} and is_metal(by_id[metal_id]):
+                bound_halides.add(ligand_id)
     for a in atoms:
         label=a['label'];explicit=None
         if label in ALIASES:label,explicit=ALIASES[label]
         number=ELEMENTS.get(label,0)
         atom=Chem.Atom(number)
-        if is_metal(a) or a.get('noImplicit'):atom.SetNoImplicit(True)
+        if is_metal(a) or a.get('noImplicit') or a['id'] in bound_halides:atom.SetNoImplicit(True)
         if 'explicitHs' in a:atom.SetNumExplicitHs(a['explicitHs'])
         if number==0:
             unknown.append(a);atom.SetNoImplicit(True)

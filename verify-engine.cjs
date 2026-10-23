@@ -214,3 +214,22 @@ assert.deepEqual(dispatched,['copy']);assert.equal(evaluate('clipboard.nativeSen
 assert.equal(evaluate("handleChemDrawKey(keyEvent('Delete'))"),false);
 delete testctx.window.ErezDesktop;
 console.log('PASS: keyboard Copy dispatches once to the native host; selected-object Delete is not swallowed by atom-label hotkeys.');
+
+// Switching tools mid-copy cancels the preview and restores actual selection IDs.
+for (const annotations of [false,true]) {
+ evaluate("gesture=null;doc=ChemCore.blank();selection.clear();annSelection.clear();undoStack=[];redoStack=[];tool='select';zoom=1;showCrosshair=false;showRulers=false;");
+ if(annotations)evaluate("doc.annotations=[{id:'cancel-text',type:'text',x:100,y:100,text:'Label'}];annSelection=new Set(['cancel-text']);");
+ else evaluate("const ca=addAtom({x:100,y:100}),cb=addAtom({x:140,y:100});addBond(ca,cb);selection=new Set([ca.id,cb.id]);");
+ const before=state(), selected=evaluate('JSON.stringify([[...selection],[...annSelection]])');
+ get('canvas').handlers.pointerdown(event(100,100,{ctrlKey:true}));
+ get('canvas').handlers.pointermove(event(200,180,{ctrlKey:true}));
+ assert.equal(evaluate('gesture.copied'),true);
+ documentHandlers.keydown.at(-1)(keyEvent('1'));
+ assert.equal(evaluate('tool'),'single');assert.equal(evaluate('gesture'),null);
+ assert.deepEqual(state(),before);assert.equal(evaluate('JSON.stringify([[...selection],[...annSelection]])'),selected);
+ get('canvas').handlers.pointerup(event(200,180));
+ assert.deepEqual(state(),before);assert.equal(evaluate('undoStack.length'),0);
+ evaluate("action('delete')");assert.equal(state().atoms.length+state().annotations.length,0);
+ evaluate("action('undo')");assert.deepEqual(state(),before);
+}
+console.log('PASS: tool changes during duplicate drags restore molecule/caption selections, preserve undo history and cancel later release.');

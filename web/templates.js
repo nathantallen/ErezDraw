@@ -14,12 +14,12 @@ window.ErezTemplatePicker=function(button,load,choose){
   root=make('div',{class:'template-cascade',role:'dialog','aria-label':'Templates'});const cats=make('div',{class:'template-categories',role:'menu','aria-label':'Template categories'}),grid=make('div',{class:'template-icons',role:'group','aria-label':'Template icons'});root.append(cats,grid);
   groups.forEach((group,i)=>{const b=make('button',{type:'button',class:'template-category',role:'menuitem','aria-haspopup':'true'});b.textContent=group.name+' ▸';b.addEventListener('pointerenter',()=>showGroup(i));b.addEventListener('click',()=>showGroup(i));b.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();showGroup(i);grid.querySelector('button')?.focus()}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();cats.children[(i+(e.key==='ArrowDown'?1:groups.length-1))%groups.length].focus()}});cats.append(b)});
   document.body.append(root);button.setAttribute('aria-expanded','true');const rect=button.getBoundingClientRect();root.style.left=Math.max(4,Math.min(rect.right+4,innerWidth-root.offsetWidth-4))+'px';root.style.top=Math.max(4,Math.min(rect.top,innerHeight-root.offsetHeight-4))+'px';showGroup(Math.min(active,groups.length-1));
-  root.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close()}else if(e.key==='ArrowLeft'){e.preventDefault();cats.children[active].focus()}});
+  root.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}else if(e.key==='ArrowLeft'){e.preventDefault();cats.children[active].focus()}});
  }
  button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-expanded','false');
  button.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();open().catch(error=>notify(error.message))});
  button.addEventListener('click',e=>{e.preventDefault();open().catch(error=>notify(error.message))});
- button.addEventListener('keydown',e=>{if(['ArrowDown','Enter',' '].includes(e.key)){e.preventDefault();open().then(()=>root?.querySelector('.template-category')?.focus())}});
+ button.addEventListener('keydown',e=>{if(['ArrowDown','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();open().then(()=>root?.querySelector('.template-category')?.focus())}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(root||loading)){close();e.preventDefault();e.stopImmediatePropagation()}},true);
  document.addEventListener('pointerdown',e=>{if(root&&!root.contains(e.target)&&!button.contains(e.target)){const onCanvas=e.target===canvas||canvas.contains(e.target);close();if(onCanvas){e.preventDefault();e.stopImmediatePropagation()}}},true);
  // Cache the catalog before a quick press-drag-release; failure is reported on open.

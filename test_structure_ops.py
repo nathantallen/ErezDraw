@@ -96,3 +96,38 @@ class RegressionCommands(unittest.TestCase):
   out=expand(d);pos={a['id']:a for a in out['atoms']}
   new=[b for b in out['bonds'] if b['id']!='b1'][0];p,q=pos[new['a']],pos[new['b']]
   self.assertAlmostEqual(((p['x']-q['x'])**2+(p['y']-q['y'])**2)**.5,19.2,places=1)
+
+
+class MetalHalideAnalysis(unittest.TestCase):
+ def salt(self, halogen='I', style='coord', reverse=False):
+  return {'atoms':[{'id':'sr','label':'Sr','x':0,'y':0,'charge':0},
+                   {'id':'a','label':halogen,'x':40,'y':0,'charge':0},
+                   {'id':'b','label':halogen,'x':-40,'y':0,'charge':0}],
+          'bonds':[{'id':str(i),'a':'sr' if reverse else key,
+                    'b':key if reverse else 'sr','order':1,'style':style}
+                   for i,key in enumerate(('a','b'))], 'annotations':[]}
+ def test_sri2_analysis_is_independent_of_bond_direction(self):
+  from structure_ops import analysis
+  for style in ('normal','coord'):
+   for reverse in (False,True):
+    with self.subTest(style=style,reverse=reverse):
+     d=self.salt(style=style,reverse=reverse)
+     data,_=analysis(d)
+     self.assertEqual(data['Formula'],'I2Sr')
+     self.assertEqual(data['Molecular weight (g/mol)'],'341.428')
+     self.assertNotIn('H:',data['Elemental composition'])
+     self.assertAlmostEqual(properties(d)['weight'],341.428,places=3)
+     self.assertEqual(len(hydrogens(d)['atoms']),3)
+ def test_other_metal_halides_do_not_gain_hydrogen(self):
+  from structure_ops import analysis
+  for halogen in ('F','Cl','Br','I'):
+   with self.subTest(halogen=halogen):
+    data,_=analysis(self.salt(halogen))
+    self.assertNotIn('H',data['Formula'])
+ def test_explicit_hydrogen_and_other_donors_are_preserved(self):
+  from structure_ops import analysis
+  d=self.salt();d['atoms'][1]['explicitHs']=1
+  self.assertEqual(analysis(d)[0]['Formula'],'HI2Sr')
+  for smiles,formula in [('CI','CH3I'),('I','HI'),('N->[Sr]<-N','H6N2Sr'),('O->[Sr]<-O','H4O2Sr')]:
+   with self.subTest(smiles=smiles):
+    self.assertEqual(analysis(drawing(smiles))[0]['Formula'],formula)
