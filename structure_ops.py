@@ -114,7 +114,7 @@ def hydrogens(drawing,selected=(),remove=False):
         for a in graph['atoms']:
             if a['label']!='H' or a['charge'] or a.get('radical'):continue
             linked=[b for b in graph['bonds'] if a['id'] in (b['a'],b['b'])]
-            if len(linked)==1 and linked[0]['order']==1 and linked[0]['style']=='normal':
+            if len(linked)==1 and linked[0]['order']==1 and linked[0].get('style','normal')=='normal':
                 other=linked[0]['b'] if linked[0]['a']==a['id'] else linked[0]['a']
                 if next(x for x in graph['atoms'] if x['id']==other)['label']!='H':removable.add(a['id'])
         out['atoms']=[a for a in out['atoms'] if a['id'] not in removable];out['bonds']=[b for b in out['bonds'] if not {b['a'],b['b']}&removable]

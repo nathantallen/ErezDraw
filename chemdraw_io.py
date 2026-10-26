@@ -144,7 +144,7 @@ def import_chemdraw(data:bytes,name='Imported ChemDraw'):
     fonts={f.get('id'):f.get('name','Arial') for f in root.iter('font')}
     colors=['#ffffff','#000000']
     for c in root.iter('color'):
-        values=[max(0,min(255,round(decimal(c.get(k,'0'),'color table')*255))) for k in ('r','g','b')];colors.append('#%02x%02x%02x'%tuple(values))
+        values=[round(max(0,min(1,decimal(c.get(k,'0'),'color table')))*255) for k in ('r','g','b')];colors.append('#%02x%02x%02x'%tuple(values))
     def style(text_node,label=False):
         runs=list(text_node.iter('s'));first=runs[0] if runs else text_node;prefix='Label' if label else 'Caption'
         face=integer(first.get('face',root.get(prefix+'Face','0')),'text style');size=decimal(first.get('size',root.get(prefix+'Size','10' if label else '12')),'text size')*SCALE

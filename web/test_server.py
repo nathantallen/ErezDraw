@@ -122,6 +122,24 @@ class ValidationTests(unittest.TestCase):
             response = self.client.post('/api/'+op, json={'drawing': drawing, 'selected': []})
             self.assertEqual(response.status_code, 200, (op, response.json))
 
+    def test_remove_hydrogens_without_bond_style(self):
+        from structure_ops import hydrogens
+        drawing = hydrogens(self.drawing)
+        for bond in drawing['bonds']:
+            bond.pop('style', None)
+        response = self.client.post('/api/remove-hydrogens', json={'drawing': drawing, 'selected': []})
+        self.assertEqual(response.status_code, 200, response.json)
+        result = response.json['drawing']
+        self.assertEqual(len(result['atoms']), 3)
+        formula = self.client.post('/api/analysis', json={'drawing': result}).json[0]['Formula']
+        self.assertEqual(formula, 'C2H6O')
+
+    def test_import_extreme_finite_color_components(self):
+        xml = b'<CDXML><colortable><color r="1e308" g="-1e308" b="0.5"/></colortable><page><n id="1" p="0 0"><t><s color="2">C</s></t></n></page></CDXML>'
+        response = self.client.post('/api/import-chemdraw', data={'file': (io.BytesIO(xml), 'colors.cdxml')})
+        self.assertEqual(response.status_code, 200, response.json)
+        self.assertEqual(response.json['drawing']['atoms'][0]['textStyle']['color'], '#ff0080')
+
     def test_malformed_ligands_and_groups_are_rejected(self):
         atom = self.drawing['atoms'][0]['id']
         cases = [
