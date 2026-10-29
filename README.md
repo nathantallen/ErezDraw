@@ -19,7 +19,7 @@ For development, run **Run-Development.bat** instead. The editor requires no ext
 
 ## Interface
 
-The classic interface follows the ChemDraw 8 Macintosh manual's illustrated layout: General and Object toolbars, a Text Style row, and a compact 36-position two-column Main Tools palette. Tool families have icon-grid popouts and tear-off menus. Every toolbar icon is original SVG geometry rather than emoji or platform stock icons. Native Windows window borders and file dialogs remain Windows controls.
+The classic interface: General and Object toolbars, a Text Style row, and a compact 36-position two-column Main Tools palette. Tool families have icon-grid popouts and tear-off menus. Every toolbar icon is original SVG geometry rather than emoji or platform stock icons. Native Windows window borders and file dialogs remain Windows controls.
 
 - **Selection:** Marquee or Lasso; Shift toggles items; Alt swaps selection tools; double-click selects a connected structure or stored group. Drag within a selection to move it. The upper-right hatched handle rotates; the lower-right handle scales. Shift during resizing allows distortion. The rotation cursor uses a curved-arrow graphic. Arrow keys nudge selections.
 - **Object tools:** Group, Ungroup and Make Group Integral; six alignment modes; horizontal/vertical equal-gap distribution; Center on Page; horizontal/vertical flips. Alignment treats a connected molecule as one object. Explicit groups combine their selected members into one alignment unit.
@@ -78,13 +78,11 @@ The arrow popup provides 23 choices: reaction, solid/hollow head, bold/dashed, r
 
 Both cyclohexane chair templates and their palette icons now use the conventional projection with three pairs of opposite parallel bonds. Existing drawings are not silently altered; redraw previously placed malformed chairs with the corrected tools.
 
-Reference: ChemDraw 8 User Guide, chapter 5, arrow drawing/editing and arc tools (https://studylib.net/doc/28511758/chemdraw8). Alt reversal is implemented as requested; this update does not claim every ChemDraw arrow-editing feature. Chair projection checked against the public-domain ChemDraw-created structural formula at https://commons.wikimedia.org/wiki/File:Chair_conformation_of_cyclohexane.svg.
-
 ## Structure, View and organometallic update (0.9 development)
 
 - The Cp minus sign is hidden. Cp and increase/decrease-charge entries have been removed from Structure; the Online menu and TLC tool have been removed.
 - Structure commands now include molecule name/MW labels, explicit hydrogen addition/removal, abbreviation expansion/contraction, name/SMILES insertion, atom/bond properties and local 1H/13C shift prediction. Labels are editable snapshots, not live calculations. A small offline common-name dictionary is included; PubChem lookup is optional and explicitly sends the entered name or structure when requested.
-- NMR uses bundled nmr-predictor HOSE lookup data. Results show shifts, atom assignments, database match counts and ranges and can be exported as CSV. The proton database is small and experimental; unmatched environments show unavailable. Metal complexes and unsupported stereochemistry are rejected. Solvent effects, coupling constants and full spectral simulation are not implemented. This is not ChemDraw's prediction model.
+- NMR uses bundled nmr-predictor HOSE lookup data. Results show shifts, atom assignments, database match counts and ranges and can be exported as CSV. The proton database is small and experimental; unmatched environments show unavailable. Metal complexes and unsupported stereochemistry are rejected. Solvent effects, coupling constants and full spectral simulation are not implemented. 
 - View provides Analysis, Chemical Properties, Info, Periodic Table, Character Map and Ligand Templates panels, rulers, a movable crosshair, grid and zoom/fit controls. Analysis includes formula, mass, composition and an approximate isotope envelope. Chemical Properties uses RDKit descriptors, not ChemDraw's proprietary physical-property estimates. Multipage layout remains unavailable.
 - Open **View > Show Ligand Templates**, or use the ligand palette icon. The 37 templates cover Cp/MeCp/Cp*, indenyl/fluorenyl, haptic alkenes/allyl/arenes, hydride/alkyl/halide, carbonyl/nitrosyl, nitrogen donors and NHC, phosphines, amides, alkoxides, acetylacetonates, ethers and sulfide. Select a template, then press in the canvas to preview and release to place. Connect a donor atom or haptic centroid using the bond tools. Haptic electron counting and metal geometry optimization are not implemented. Save .chemjson to retain centroid attachments.
 - The arrow popup places full-head and half-head choices in separate rows, each progressing from straight to 90°, 120°, 180° and 270° left to right, followed by other arrow types.
@@ -103,7 +101,6 @@ Choose the globe/trackball icon near the top of Main Tools. Drag a marquee aroun
 
 Perspective depth persists in .chemjson, clipboard fragments and MOL V2000 coordinates. Cp/haptic centroids follow the transformed member atoms. Object > Flatten removes stored depth while retaining the displayed XY projection; use Undo to restore the tilt, or cleanup after Flatten to generate a fresh 2D layout. Cleanup protects components with nonzero depth. This is an orthographic drawing manipulation, not conformer generation or metal geometry optimization; wedge/hashed styles remain unchanged. Arbitrary bond-axis rotation controls and depth-dependent bond layering are not provided.
 
-Reference: ChemDraw 8 User Guide, chapter 6, Structure Perspective and Flatten (printed page 102): https://studylib.net/doc/28511758/chemdraw8 . Native Qt pointer tests and drawing-engine regressions passed, including marquee selection, previews, Shift constraints, one Undo, centroid depth, validation and JSON/MOL/clipboard roundtrips. 33 Python tests passed. Windows display behavior remains unverified here.
 
 ## Graphics, text, spectra and charge update (0.10 development)
 
